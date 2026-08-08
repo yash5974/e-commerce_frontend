@@ -1,0 +1,703 @@
+import { Types } from "mongoose";
+
+export type ObjectId = Types.ObjectId;
+
+export interface BaseDocument {
+  _id: ObjectId;
+  createdAt: Date;
+}
+
+export interface SoftDelete {
+  isActive: boolean;
+}
+
+import { Document, Schema, model } from "mongoose";
+import { BaseDocument, ObjectId, SoftDelete } from "./base.types.js";
+
+export interface IProduct extends BaseDocument, SoftDelete, Document {
+  name: string;
+  slug: string;
+  description: string;
+  categoryId: ObjectId;
+  brand: string;
+  price: number;
+  discountPrice: number;
+  stock: number;
+  mainImage: string;
+  galleryImages: string[];
+  rating: number;
+  reviewCount: number;
+  tags: string[];
+}
+
+const productSchema = new Schema<IProduct>(
+  {
+    name: { type: String, required: true },
+    slug: { type: String, required: true },
+    description: { type: String, required: true },
+    categoryId: {
+      type: Schema.Types.ObjectId,
+      ref: "Category",
+      required: true,
+    },
+    brand: { type: String, required: true },
+    price: { type: Number, required: true },
+    discountPrice: { type: Number, default: 0 },
+    stock: { type: Number, required: true },
+    mainImage: { type: String, required: true },
+    galleryImages: { type: [String], default: [] },
+    rating: { type: Number, default: 0 },
+    reviewCount: { type: Number, default: 0 },
+    tags: { type: [String], default: [] },
+    isActive: { type: Boolean, default: true },
+  },
+  { timestamps: { createdAt: true, updatedAt: false } },
+);
+
+// INDEXES (MANDATORY)
+productSchema.index({
+  isActive: 1,
+  categoryId: 1,
+  createdAt: -1,
+});
+productSchema.index({
+  isActive: 1,
+  price: 1,
+});
+productSchema.index({
+  isActive: 1,
+  rating: -1,
+});
+productSchema.index({
+  isActive: 1,
+  brand: 1,
+});
+productSchema.index({
+  name: "text",
+  brand: "text",
+  tags: "text",
+});
+productSchema.index({ slug: 1 }, { unique: true });
+
+export const ProductModel = model<IProduct>("Product", productSchema);
+
+
+
+export const getProducts = async (req: Request, res: Response) => {
+  const page = Math.max(Number(req.query.page) || 1, 1);
+
+  const limit = Math.min(Math.max(Number(req.query.limit) || 10, 1), 100);
+
+  if (Number.isNaN(page) || Number.isNaN(limit)) {
+    throw new ForbiddenError("Invalid pagination values");
+  }
+
+  const {
+    search,
+    categoryId,
+    brand,
+    minPrice,
+    maxPrice,
+    minRating,
+    inStock,
+    tags,
+    sort,
+  } = req.query;
+
+  const filter: any = {};
+
+  if (categoryId) {
+    if (!mongoose.Types.ObjectId.isValid(String(categoryId))) {
+      throw new ForbiddenError("Invalid category id");
+    }
+
+    filter.categoryId = categoryId;
+  }
+
+  if (search) {
+    const keyword = String(search).trim();
+
+    if (keyword.length > 100) {
+      throw new ForbiddenError("Search keyword too long");
+    }
+
+    filter.$text = {
+      $search: keyword,
+    };
+  }
+
+  if (brand) {
+    filter.brand = String(brand).trim();
+  }
+
+  if (minPrice || maxPrice) {
+    filter.price = {};
+
+    if (minPrice) {
+      const min = Number(minPrice);
+
+      if (Number.isNaN(min) || min < 0) {
+        throw new ForbiddenError("Invalid minimum price");
+      }
+
+      filter.price.$gte = min;
+    }
+
+    if (maxPrice) {
+      const max = Number(maxPrice);
+
+      if (Number.isNaN(max) || max < 0) {
+        throw new ForbiddenError("Invalid maximum price");
+      }
+
+      filter.price.$lte = max;
+    }
+
+    if (
+      filter.price.$gte &&
+      filter.price.$lte &&
+      filter.price.$gte > filter.price.$lte
+    ) {
+      throw new ForbiddenError("Minimum price cannot exceed maximum price");
+    }
+  }
+
+  if (minRating) {
+    const rating = Number(minRating);
+
+    if (Number.isNaN(rating) || rating < 0 || rating > 5) {
+      throw new ForbiddenError("Rating must be between 0 and 5");
+    }
+
+    filter.rating = {
+      $gte: rating,
+    };
+  }
+
+  if (inStock === "true") {
+    filter.stock = {
+      $gt: 0,
+    };
+  }
+
+  if (inStock === "false") {
+    filter.stock = 0;
+  }
+
+  if (tags) {
+    const tagList = String(tags)
+      .split(",")
+      .map((tag) => tag.trim())
+      .filter(Boolean);
+
+    if (tagList.length) {
+      filter.tags = {
+        $in: tagList,
+      };
+    }
+  }
+
+  let sortOption: any = {
+    createdAt: -1,
+  };
+
+  switch (sort) {
+    case "price_asc":
+      sortOption = {
+        price: 1,
+      };
+      break;
+
+    case "price_desc":
+      sortOption = {
+        price: -1,
+      };
+      break;
+
+    case "rating":
+      sortOption = {
+        rating: -1,
+      };
+      break;
+
+    case "name":
+      sortOption = {
+        name: 1,
+      };
+      break;
+
+    case "discount":
+      sortOption = {
+        discountPrice: -1,
+      };
+      break;
+
+    default:
+      break;
+  }
+
+  const cacheKey = `products:list:${crypto
+    .createHash("md5")
+    .update(
+      JSON.stringify({
+        filter,
+        page,
+        limit,
+        sortOption,
+      }),
+    )
+    .digest("hex")}`;
+
+  const cached = await CacheService.get<ProductCache>(cacheKey);
+
+  if (cached) {
+    return res.status(200).json(cached);
+  }
+
+  const skip = (page - 1) * limit;
+
+  const [products, totalProducts] = await Promise.all([
+    ProductModel.find(filter)
+      .sort(sortOption)
+      .skip(skip)
+      .limit(limit)
+      .select(
+        "_id name slug brand price discountPrice stock mainImage rating reviewCount",
+      )
+      .lean(),
+
+    ProductModel.countDocuments(filter),
+  ]);
+
+  const totalPages = Math.ceil(totalProducts / limit);
+
+  const response = {
+    data: products,
+
+    meta: {
+      page,
+      limit,
+      totalProducts,
+      totalPages,
+
+      hasNextPage: page < totalPages,
+
+      hasPreviousPage: page > 1,
+    },
+  };
+
+  await CacheService.set(cacheKey, response, 120);
+
+  return res.status(200).json({
+    success: true,
+    message: "Products fetched successfully",
+    data: products,
+    meta: response.meta,
+  });
+};
+
+router.get("/products", asyncHandler(getProducts));
+
+I have the above API with its route & schema from backend and below provided download packages in reactjs with typescript and given folder structure in screenshot and below is the axios intercepter in frontend, so will you please provide me the production grade register component with its functionality, hooks with the prrovided folder structure in the image?
+Consider it as project portfolio so that you't want invest too much time in it.
+
+"dependencies": {
+    "@base-ui/react": "^1.6.0",
+    "@fontsource-variable/geist": "^5.2.9",
+    "@hookform/resolvers": "^5.4.0",
+    "@radix-ui/react-accordion": "^1.2.16",
+    "@radix-ui/react-alert-dialog": "^1.1.19",
+    "@radix-ui/react-aspect-ratio": "^1.1.11",
+    "@radix-ui/react-avatar": "^1.2.2",
+    "@radix-ui/react-checkbox": "^1.3.7",
+    "@radix-ui/react-collapsible": "^1.1.16",
+    "@radix-ui/react-context-menu": "^2.3.3",
+    "@radix-ui/react-dialog": "^1.1.19",
+    "@radix-ui/react-dropdown-menu": "^2.1.20",
+    "@radix-ui/react-hover-card": "^1.1.19",
+    "@radix-ui/react-label": "^2.1.11",
+    "@radix-ui/react-menubar": "^1.1.20",
+    "@radix-ui/react-navigation-menu": "^1.2.18",
+    "@radix-ui/react-popover": "^1.1.19",
+    "@radix-ui/react-progress": "^1.1.12",
+    "@radix-ui/react-radio-group": "^1.4.3",
+    "@radix-ui/react-scroll-area": "^1.2.14",
+    "@radix-ui/react-select": "^2.3.3",
+    "@radix-ui/react-separator": "^1.1.11",
+    "@radix-ui/react-slider": "^1.4.3",
+    "@radix-ui/react-slot": "^1.3.0",
+    "@radix-ui/react-switch": "^1.3.3",
+    "@radix-ui/react-tabs": "^1.1.17",
+    "@radix-ui/react-toast": "^1.2.19",
+    "@radix-ui/react-toggle": "^1.1.14",
+    "@radix-ui/react-toggle-group": "^1.1.15",
+    "@radix-ui/react-tooltip": "^1.2.12",
+    "@reduxjs/toolkit": "^2.12.0",
+    "@tailwindcss/vite": "^4.3.2",
+    "@tanstack/react-query": "^5.101.2",
+    "@tanstack/react-query-devtools": "^5.101.2",
+    "@tanstack/react-table": "^8.21.3",
+    "@tanstack/react-virtual": "^3.14.5",
+    "axios": "^1.18.1",
+    "class-variance-authority": "^0.7.1",
+    "clsx": "^2.1.1",
+    "cmdk": "^1.1.1",
+    "date-fns": "^4.4.0",
+    "echarts": "^6.1.0",
+    "echarts-for-react": "^3.0.6",
+    "embla-carousel-react": "^8.6.0",
+    "lucide-react": "^1.24.0",
+    "next-themes": "^0.4.6",
+    "react": "^19.2.7",
+    "react-day-picker": "^10.0.1",
+    "react-dom": "^19.2.7",
+    "react-hook-form": "^7.81.0",
+    "react-redux": "^9.3.0",
+    "react-router-dom": "^7.18.1",
+    "recharts": "^3.9.2",
+    "shadcn": "^4.13.0",
+    "sonner": "^2.0.7",
+    "tailwind-merge": "^3.6.0",
+    "tailwindcss": "^4.3.2",
+    "tw-animate-css": "^1.4.0",
+    "zod": "^4.4.3"
+  },
+  "devDependencies": {
+    "@eslint/js": "^10.0.1",
+    "@types/node": "^24.13.3",
+    "@types/react": "^19.2.17",
+    "@types/react-dom": "^19.2.3",
+    "@vitejs/plugin-react": "^6.0.3",
+    "eslint": "^10.7.0",
+    "eslint-config-prettier": "^10.1.8",
+    "eslint-plugin-react-hooks": "^7.1.1",
+    "eslint-plugin-react-refresh": "^0.5.3",
+    "globals": "^17.7.0",
+    "oxlint": "^1.73.0",
+    "prettier": "^3.9.5",
+    "prettier-plugin-tailwindcss": "^0.8.0",
+    "typescript": "^5.9.2",
+    "typescript-eslint": "^8.63.0",
+    "vite": "^8.1.1"
+  }
+
+import axios from "axios";
+
+const api = axios.create({
+  baseURL: import.meta.env.VITE_API_URL,
+  timeout: 15000,
+  withCredentials: true,
+  headers: {
+    Accept: "application/json",
+    "Content-Type": "application/json",
+  },
+});
+
+export default api;
+
+
+import type { AxiosRequestConfig } from "axios";
+import api from "./index";
+
+export const apiClient = {
+  get<TResponse>(url: string, config?: AxiosRequestConfig) {
+    return api.get<TResponse>(url, config).then((res) => res.data);
+  },
+
+  post<TResponse, TRequest = unknown>(
+    url: string,
+    body?: TRequest,
+    config?: AxiosRequestConfig,
+  ) {
+    return api.post<TResponse>(url, body, config).then((res) => res.data);
+  },
+
+  put<TResponse, TRequest = unknown>(
+    url: string,
+    body?: TRequest,
+    config?: AxiosRequestConfig,
+  ) {
+    return api.put<TResponse>(url, body, config).then((res) => res.data);
+  },
+
+  patch<TResponse, TRequest = unknown>(
+    url: string,
+    body?: TRequest,
+    config?: AxiosRequestConfig,
+  ) {
+    return api.patch<TResponse>(url, body, config).then((res) => res.data);
+  },
+
+  delete<TResponse>(url: string, config?: AxiosRequestConfig) {
+    return api.delete<TResponse>(url, config).then((res) => res.data);
+  },
+};
+
+
+// src/api/endpoints.ts
+
+export const API_ENDPOINTS = {
+  AUTH: {
+    REGISTER: "/auth/register",
+    LOGIN: "/auth/login",
+    REFRESH: "/auth/refresh",
+    ME: "/auth/me",
+    LOGOUT: "/auth/logout",
+  },
+
+  PRODUCTS: {
+    LIST: "/products",
+    DETAILS: (id: string) => `/products/${id}`,
+  },
+
+  CART: {
+    GET: "/cart",
+    ADD: "/cart",
+    UPDATE: (productId: string) => `/cart/${productId}`,
+    REMOVE: (productId: string) => `/cart/${productId}`,
+    CLEAR: "/cart",
+  },
+
+  ORDERS: {
+    CREATE: "/orders",
+    LIST: "/orders",
+    DETAILS: (id: string) => `/orders/${id}`,
+  },
+
+  PAYMENTS: {
+    INTENT: "/payments/intent",
+    WEBHOOK: "/webhook/payment",
+  },
+
+  ADMIN: {
+    PRODUCTS: {
+      CREATE: "/admin/products",
+      UPDATE: (id: string) => `/admin/products/${id}`,
+      DELETE: (id: string) => `/admin/products/${id}`,
+    },
+
+    ORDERS: {
+      LIST: "/admin/orders",
+      UPDATE_STATUS: (id: string) => `/admin/orders/${id}`,
+    },
+
+    INVENTORY: {
+      UPDATE: (productId: string) => `/admin/inventory/${productId}`,
+    },
+
+    ANALYTICS: {
+      SALES: "/admin/analytics/sales",
+      REVENUE: "/admin/analytics/revenue",
+      TOP_PRODUCTS: "/admin/analytics/top-products",
+    },
+  },
+} as const;
+
+export default API_ENDPOINTS;
+
+
+import api from "./axios";
+import { setupInterceptors } from "./interceptors";
+
+let initialized = false;
+export const initializeApi = () => {
+  if (initialized) return;
+  setupInterceptors(api);
+  initialized = true;
+};
+initializeApi();
+
+export default api;
+
+
+import type {
+  AxiosError,
+  AxiosInstance,
+  InternalAxiosRequestConfig,
+} from "axios";
+
+import api from "./axios";
+import API_ENDPOINTS from "./endpoints";
+import tokenStorage from "./storage";
+
+interface RefreshResponse {
+  success: boolean;
+  data: {
+    accessToken: string;
+  };
+}
+
+interface RetryAxiosRequestConfig extends InternalAxiosRequestConfig {
+  _retry?: boolean;
+}
+
+let isRefreshing = false;
+
+let failedQueue: Array<{
+  resolve: (token: string) => void;
+  reject: (error: unknown) => void;
+}> = [];
+
+const processQueue = (error: unknown, accessToken: string | null): void => {
+  failedQueue.forEach(({ resolve, reject }) => {
+    if (error) {
+      reject(error);
+      return;
+    }
+
+    resolve(accessToken as string);
+  });
+
+  failedQueue = [];
+};
+
+const refreshAccessToken = async (): Promise<string> => {
+  const response = await api.post<RefreshResponse>(API_ENDPOINTS.AUTH.REFRESH);
+  const accessToken = response.data.data.accessToken;
+  tokenStorage.setAccessToken(accessToken);
+  return accessToken;
+};
+
+export const setupInterceptors = (instance: AxiosInstance): void => {
+  /**
+   * REQUEST
+   */
+  instance.interceptors.request.use(
+    (config: InternalAxiosRequestConfig): InternalAxiosRequestConfig => {
+      const accessToken = tokenStorage.getAccessToken();
+
+      if (accessToken) {
+        config.headers.Authorization = `Bearer ${accessToken}`;
+      }
+
+      return config;
+    },
+    (error) => Promise.reject(error),
+  );
+
+  /**
+   * RESPONSE
+   */
+  instance.interceptors.response.use(
+    (response) => response,
+
+    async (error: AxiosError) => {
+      if (!error.config) {
+        return Promise.reject(error);
+      }
+
+      const originalRequest = error.config as RetryAxiosRequestConfig;
+
+      /**
+       * Ignore if:
+       * - no response
+       * - not 401
+       */
+      if (!error.response || error.response.status !== 401) {
+        return Promise.reject(error);
+      }
+
+      /**
+       * Never refresh refresh endpoint
+       */
+      if (originalRequest.url?.includes("/auth/refresh")) {
+        tokenStorage.clear();
+
+        return Promise.reject(error);
+      }
+
+      /**
+       * Retry only once
+       */
+      if (originalRequest._retry) {
+        tokenStorage.clear();
+
+        return Promise.reject(error);
+      }
+
+      originalRequest._retry = true;
+
+      /**
+       * Queue requests while refreshing
+       */
+      if (isRefreshing) {
+        return new Promise((resolve, reject) => {
+          failedQueue.push({
+            resolve: (token: string) => {
+              if (originalRequest.headers) {
+                originalRequest.headers.Authorization = `Bearer ${token}`;
+              }
+
+              resolve(instance(originalRequest));
+            },
+            reject,
+          });
+        });
+      }
+
+      isRefreshing = true;
+
+      try {
+        const newAccessToken = await refreshAccessToken();
+
+        processQueue(null, newAccessToken);
+
+        if (originalRequest.headers) {
+          originalRequest.headers.Authorization = `Bearer ${newAccessToken}`;
+        }
+
+        return instance(originalRequest);
+      } catch (refreshError) {
+        processQueue(refreshError, null);
+
+        tokenStorage.clear();
+
+        return Promise.reject(refreshError);
+      } finally {
+        isRefreshing = false;
+      }
+    },
+  );
+};
+
+
+const ACCESS_TOKEN_KEY = "accessToken";
+
+export const tokenStorage = {
+  getAccessToken(): string | null {
+    return localStorage.getItem(ACCESS_TOKEN_KEY);
+  },
+
+  setAccessToken(token: string): void {
+    localStorage.setItem(ACCESS_TOKEN_KEY, token);
+  },
+
+  removeAccessToken(): void {
+    localStorage.removeItem(ACCESS_TOKEN_KEY);
+  },
+
+  clear(): void {
+    localStorage.removeItem(ACCESS_TOKEN_KEY);
+  },
+};
+
+export default tokenStorage;
+
+
+
+
+
+Every file will use:
+
+✅ React Hook Form
+✅ Zod
+✅ TypeScript strict
+✅ Sonner
+✅ Loading state
+✅ API error handling
+✅ Password visibility toggle
+✅ Disabled submit while loading
+✅ Accessible form controls
+✅ Reusable architecture
+✅ Compatible with your Axios wrapper
+✅ Compatible with your folder structure

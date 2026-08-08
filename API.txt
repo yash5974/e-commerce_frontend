@@ -1,0 +1,326 @@
+Backend: cd /home/yash/IT/Projects/e-commerce/e-commerce_backend
+Frontend: cd /home/yash/IT/Projects/e-commerce/e-commerce_frontend
+
+--------------------------------
+axios.ts
+--------------------------------
+import axios from "axios";
+
+const api = axios.create({
+  baseURL: import.meta.env.VITE_API_URL,
+  timeout: 15000,
+  withCredentials: true,
+  headers: {
+    Accept: "application/json",
+    "Content-Type": "application/json",
+  },
+});
+
+export default api;
+
+--------------------------------
+intercepter.ts
+--------------------------------
+import type {
+  AxiosError,
+  AxiosInstance,
+  InternalAxiosRequestConfig,
+} from "axios";
+
+import api from "./axios";
+import API_ENDPOINTS from "./endpoints";
+import tokenStorage from "./storage";
+
+interface RefreshResponse {
+  success: boolean;
+  data: {
+    accessToken: string;
+  };
+}
+
+interface RetryAxiosRequestConfig extends InternalAxiosRequestConfig {
+  _retry?: boolean;
+}
+
+let isRefreshing = false;
+
+let failedQueue: Array<{
+  resolve: (token: string) => void;
+  reject: (error: unknown) => void;
+}> = [];
+
+const processQueue = (error: unknown, accessToken: string | null): void => {
+  failedQueue.forEach(({ resolve, reject }) => {
+    if (error) {
+      reject(error);
+      return;
+    }
+
+    resolve(accessToken as string);
+  });
+
+  failedQueue = [];
+};
+
+const refreshAccessToken = async (): Promise<string> => {
+  const response = await api.post<RefreshResponse>(API_ENDPOINTS.AUTH.REFRESH);
+  const accessToken = response.data.data.accessToken;
+  tokenStorage.setAccessToken(accessToken);
+  return accessToken;
+};
+
+export const setupInterceptors = (instance: AxiosInstance): void => {
+  /**
+   * REQUEST
+   */
+  instance.interceptors.request.use(
+    (config: InternalAxiosRequestConfig): InternalAxiosRequestConfig => {
+      const accessToken = tokenStorage.getAccessToken();
+
+      if (accessToken) {
+        config.headers.Authorization = `Bearer ${accessToken}`;
+      }
+
+      return config;
+    },
+    (error) => Promise.reject(error),
+  );
+
+  /**
+   * RESPONSE
+   */
+  instance.interceptors.response.use(
+    (response) => response,
+
+    async (error: AxiosError) => {
+      if (!error.config) {
+        return Promise.reject(error);
+      }
+
+      const originalRequest = error.config as RetryAxiosRequestConfig;
+
+      /**
+       * Ignore if:
+       * - no response
+       * - not 401
+       */
+      if (!error.response || error.response.status !== 401) {
+        return Promise.reject(error);
+      }
+
+      /**
+       * Never refresh refresh endpoint
+       */
+      if (originalRequest.url?.includes("/auth/refresh")) {
+        tokenStorage.clear();
+
+        return Promise.reject(error);
+      }
+
+      /**
+       * Retry only once
+       */
+      if (originalRequest._retry) {
+        tokenStorage.clear();
+
+        return Promise.reject(error);
+      }
+
+      originalRequest._retry = true;
+
+      /**
+       * Queue requests while refreshing
+       */
+      if (isRefreshing) {
+        return new Promise((resolve, reject) => {
+          failedQueue.push({
+            resolve: (token: string) => {
+              if (originalRequest.headers) {
+                originalRequest.headers.Authorization = `Bearer ${token}`;
+              }
+
+              resolve(instance(originalRequest));
+            },
+            reject,
+          });
+        });
+      }
+
+      isRefreshing = true;
+
+      try {
+        const newAccessToken = await refreshAccessToken();
+
+        processQueue(null, newAccessToken);
+
+        if (originalRequest.headers) {
+          originalRequest.headers.Authorization = `Bearer ${newAccessToken}`;
+        }
+
+        return instance(originalRequest);
+      } catch (refreshError) {
+        processQueue(refreshError, null);
+
+        tokenStorage.clear();
+
+        return Promise.reject(refreshError);
+      } finally {
+        isRefreshing = false;
+      }
+    },
+  );
+};
+
+--------------------------------
+index.ts
+--------------------------------
+import api from "./axios";
+import { setupInterceptors } from "./interceptors";
+
+let initialized = false;
+export const initializeApi = () => {
+  if (initialized) return;
+  setupInterceptors(api);
+  initialized = true;
+};
+initializeApi();
+
+export default api;
+
+
+--------------------------------
+client.ts
+--------------------------------
+import type { AxiosRequestConfig } from "axios";
+import api from "./index";
+
+export const apiClient = {
+  get<TResponse>(url: string, config?: AxiosRequestConfig) {
+    return api.get<TResponse>(url, config).then((res) => res.data);
+  },
+
+  post<TResponse, TRequest = unknown>(
+    url: string,
+    body?: TRequest,
+    config?: AxiosRequestConfig,
+  ) {
+    return api.post<TResponse>(url, body, config).then((res) => res.data);
+  },
+
+  put<TResponse, TRequest = unknown>(
+    url: string,
+    body?: TRequest,
+    config?: AxiosRequestConfig,
+  ) {
+    return api.put<TResponse>(url, body, config).then((res) => res.data);
+  },
+
+  patch<TResponse, TRequest = unknown>(
+    url: string,
+    body?: TRequest,
+    config?: AxiosRequestConfig,
+  ) {
+    return api.patch<TResponse>(url, body, config).then((res) => res.data);
+  },
+
+  delete<TResponse>(url: string, config?: AxiosRequestConfig) {
+    return api.delete<TResponse>(url, config).then((res) => res.data);
+  },
+};
+
+
+
+--------------------------------
+endPoints.ts
+--------------------------------
+// src/api/endpoints.ts
+
+export const API_ENDPOINTS = {
+  AUTH: {
+    REGISTER: "/auth/register",
+    LOGIN: "/auth/login",
+    REFRESH: "/auth/refresh",
+    ME: "/auth/me",
+    LOGOUT: "/auth/logout",
+  },
+
+  PRODUCTS: {
+    LIST: "/products",
+    DETAILS: (id: string) => `/products/${id}`,
+  },
+
+  CART: {
+    GET: "/cart",
+    ADD: "/cart",
+    UPDATE: (productId: string) => `/cart/${productId}`,
+    REMOVE: (productId: string) => `/cart/${productId}`,
+    CLEAR: "/cart",
+  },
+
+  ORDERS: {
+    CREATE: "/orders",
+    LIST: "/orders",
+    DETAILS: (id: string) => `/orders/${id}`,
+  },
+
+  PAYMENTS: {
+    INTENT: "/payments/intent",
+    WEBHOOK: "/webhook/payment",
+  },
+
+  ADMIN: {
+    PRODUCTS: {
+      CREATE: "/admin/products",
+      UPDATE: (id: string) => `/admin/products/${id}`,
+      DELETE: (id: string) => `/admin/products/${id}`,
+    },
+
+    ORDERS: {
+      LIST: "/admin/orders",
+      UPDATE_STATUS: (id: string) => `/admin/orders/${id}`,
+    },
+
+    INVENTORY: {
+      UPDATE: (productId: string) => `/admin/inventory/${productId}`,
+    },
+
+    ANALYTICS: {
+      SALES: "/admin/analytics/sales",
+      REVENUE: "/admin/analytics/revenue",
+      TOP_PRODUCTS: "/admin/analytics/top-products",
+    },
+  },
+} as const;
+
+export default API_ENDPOINTS;
+
+
+
+--------------------------------
+storage.ts
+--------------------------------
+const ACCESS_TOKEN_KEY = "accessToken";
+
+export const tokenStorage = {
+  getAccessToken(): string | null {
+    return localStorage.getItem(ACCESS_TOKEN_KEY);
+  },
+
+  setAccessToken(token: string): void {
+    localStorage.setItem(ACCESS_TOKEN_KEY, token);
+  },
+
+  removeAccessToken(): void {
+    localStorage.removeItem(ACCESS_TOKEN_KEY);
+  },
+
+  clear(): void {
+    localStorage.removeItem(ACCESS_TOKEN_KEY);
+  },
+};
+
+export default tokenStorage;
+
+
+
+This is how I set my functionality. Rate it out of 10 for my project portfolio.
