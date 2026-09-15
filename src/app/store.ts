@@ -3,6 +3,8 @@ import { configureStore } from "@reduxjs/toolkit";
 import cartReducer from "@/features/cart/store/cart.slice";
 import orderReducer from "@/features/orders/store/order.slice";
 import paymentReducer from "@/features/payments/store/payment.slice";
+import productReducer from "@/features/products/store/product.slice";
+import inventoryReducer from "@/features/inventory/store/inventory.slice";
 
 export const store = configureStore({
   reducer: {
@@ -10,6 +12,8 @@ export const store = configureStore({
     cart: cartReducer,
     orders: orderReducer,
     payments: paymentReducer,
+    product: productReducer,
+    inventory: inventoryReducer,
   },
 });
 

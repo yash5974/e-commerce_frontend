@@ -9,6 +9,14 @@ import type {
   RegisterRequest,
   RegisterResponse,
 } from "../types/auth.type";
+import type {
+  ForgotPasswordRequest,
+  ForgotPasswordResponse,
+  NewPasswordRequest,
+  NewPasswordResponse,
+  VerifyOtpRequest,
+  VerifyOtpResponse,
+} from "../types/password.type";
 
 /**
  * Register
@@ -35,6 +43,33 @@ export const loginApi = (payload: LoginRequest): Promise<LoginResponse> => {
 export const logoutApi = (payload: LogoutRequest): Promise<LogoutResponse> => {
   return apiClient.post<LogoutResponse, LogoutRequest>(
     API_ENDPOINTS.AUTH.LOGOUT,
+    payload,
+  );
+};
+
+export const forgotPasswordApi = (
+  payload: ForgotPasswordRequest,
+): Promise<ForgotPasswordResponse> => {
+  return apiClient.post<ForgotPasswordResponse, ForgotPasswordRequest>(
+    API_ENDPOINTS.AUTH.FORGOT,
+    payload,
+  );
+};
+
+export const verifyOtpApi = (
+  payload: VerifyOtpRequest,
+): Promise<VerifyOtpResponse> => {
+  return apiClient.post<VerifyOtpResponse, VerifyOtpRequest>(
+    API_ENDPOINTS.AUTH.RESET,
+    payload,
+  );
+};
+
+export const newPasswordApi = (
+  payload: NewPasswordRequest,
+): Promise<NewPasswordResponse> => {
+  return apiClient.post<NewPasswordResponse, NewPasswordRequest>(
+    API_ENDPOINTS.AUTH.NEW,
     payload,
   );
 };

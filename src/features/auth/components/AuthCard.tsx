@@ -1,4 +1,10 @@
-// import { Card, CardDescription, CardHeader, CardTitle } from "@/ui/card";
+// import {
+//   Card,
+//   CardContent,
+//   CardDescription,
+//   CardHeader,
+//   CardTitle,
+// } from "@/ui/card";
 // import type { ReactNode } from "react";
 
 // interface AuthCardProps {
@@ -13,19 +19,19 @@
 //   children,
 // }: AuthCardProps) {
 //   return (
-//     <Card className="mx-auto w-full max-w-md shadow-lg">
+//     <Card className="w-full shadow-lg">
 //       <CardHeader className="space-y-2 text-center">
-//         <CardTitle className="text-2xl font-bold tracking-tight">
-//           {title}
-//         </CardTitle>
+//         <CardTitle className="text-2xl">{title}</CardTitle>
 
-//         {description ? <CardDescription>{description}</CardDescription> : null}
+//         {description && <CardDescription>{description}</CardDescription>}
 //       </CardHeader>
 
-//       {children}
+//       <CardContent>{children}</CardContent>
 //     </Card>
 //   );
 // }
+
+import type { ReactNode } from "react";
 
 import {
   Card,
@@ -34,7 +40,6 @@ import {
   CardHeader,
   CardTitle,
 } from "@/ui/card";
-import type { ReactNode } from "react";
 
 interface AuthCardProps {
   title: string;
@@ -49,13 +54,13 @@ export default function AuthCard({
 }: AuthCardProps) {
   return (
     <Card className="w-full shadow-lg">
-      <CardHeader className="space-y-2 text-center">
+      <CardHeader className="w-full space-y-2 text-center">
         <CardTitle className="text-2xl">{title}</CardTitle>
 
         {description && <CardDescription>{description}</CardDescription>}
       </CardHeader>
 
-      <CardContent>{children}</CardContent>
+      <CardContent className="w-full">{children}</CardContent>
     </Card>
   );
 }

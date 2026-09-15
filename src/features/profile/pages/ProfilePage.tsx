@@ -1,28 +1,25 @@
-import { useEffect } from "react";
-import { useCurrentUser } from "../hooks/useCurrentUser";
+import AccountActions from "../components/AccountActions";
+import CartSummary from "../components/CartSummary";
+import ProfileSummary from "../components/ProfileSummary";
+import RecentOrders from "../components/RecentOrders";
 
 export default function ProfilePage() {
-  const { user, isLoading, fetchCurrentUser } = useCurrentUser();
-
-  useEffect(() => {
-    void fetchCurrentUser();
-  }, [fetchCurrentUser]);
-
-  if (isLoading) {
-    return <div>Loading...</div>;
-  }
-
-  if (!user) {
-    return <div>User not found.</div>;
-  }
-
   return (
-    <div className="space-y-2">
-      <h1>{user.name}</h1>
+    <main className="container mx-auto space-y-6 px-4 py-8">
+      <div>
+        <h1 className="text-2xl font-bold">My Account</h1>
+        <p className="mt-1 text-sm text-muted-foreground">
+          Manage your profile, orders, and shopping cart.
+        </p>
+      </div>
 
-      <p>{user.email}</p>
+      <ProfileSummary />
 
-      <p>{user.role}</p>
-    </div>
+      <div className="grid gap-6 lg:grid-cols-2">
+        <RecentOrders />
+        <CartSummary />
+      </div>
+      <AccountActions />
+    </main>
   );
 }

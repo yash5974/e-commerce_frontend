@@ -8,19 +8,27 @@ import {
   createOrderService,
   getMyOrdersService,
   getOrderDetailsService,
+  orderService,
 } from "../services/order.service";
 
-import type { CreateOrderRequest, Order } from "../types/order.type";
+import axios from "axios";
+import type {
+  AdminOrder,
+  CreateOrderRequest,
+  Order,
+  UpdateOrderStatusRequest,
+} from "../types/order.type";
 
 interface OrderState {
   orders: Order[];
-
   selectedOrder: Order | null;
-
   isCreating: boolean;
   isLoadingOrders: boolean;
   isLoadingDetails: boolean;
-
+  isUpdatingStatus: boolean;
+  ordersRequestStatus: "idle" | "pending" | "fulfilled" | "rejected";
+  updatedOrder: AdminOrder | null;
+  error: string | null;
   createError: string | null;
   ordersError: string | null;
   detailsError: string | null;
@@ -28,13 +36,14 @@ interface OrderState {
 
 const initialState: OrderState = {
   orders: [],
-
   selectedOrder: null,
-
   isCreating: false,
   isLoadingOrders: false,
   isLoadingDetails: false,
-
+  isUpdatingStatus: false,
+  ordersRequestStatus: "idle",
+  updatedOrder: null,
+  error: null,
   createError: null,
   ordersError: null,
   detailsError: null,
@@ -93,6 +102,39 @@ export const fetchOrderDetails = createAsyncThunk<
   }
 });
 
+export const updateOrderStatus = createAsyncThunk<
+  AdminOrder,
+  {
+    orderId: string;
+    status: UpdateOrderStatusRequest["status"];
+  },
+  {
+    rejectValue: string;
+  }
+>(
+  "orders/updateOrderStatus",
+  async ({ orderId, status }, { rejectWithValue }) => {
+    try {
+      const response = await orderService.updateOrderStatus(orderId, {
+        status,
+      });
+
+      return response.data;
+    } catch (error: unknown) {
+      if (axios.isAxiosError(error)) {
+        const message =
+          error.response?.data?.error?.message ??
+          error.response?.data?.message ??
+          "Failed to update order status.";
+
+        return rejectWithValue(message);
+      }
+
+      return rejectWithValue("Failed to update order status.");
+    }
+  },
+);
+
 const orderSlice = createSlice({
   name: "orders",
 
@@ -113,6 +155,14 @@ const orderSlice = createSlice({
 
     clearSelectedOrder(state) {
       state.selectedOrder = null;
+    },
+
+    clearOrderMutationError: (state) => {
+      state.error = null;
+    },
+
+    clearUpdatedOrder: (state) => {
+      state.updatedOrder = null;
     },
   },
 
@@ -148,20 +198,20 @@ const orderSlice = createSlice({
 
       .addCase(fetchMyOrders.pending, (state) => {
         state.isLoadingOrders = true;
+        state.ordersRequestStatus = "pending";
         state.ordersError = null;
       })
-
       .addCase(
         fetchMyOrders.fulfilled,
         (state, action: PayloadAction<Order[]>) => {
           state.isLoadingOrders = false;
+          state.ordersRequestStatus = "fulfilled";
           state.orders = action.payload;
         },
       )
-
       .addCase(fetchMyOrders.rejected, (state, action) => {
         state.isLoadingOrders = false;
-
+        state.ordersRequestStatus = "rejected";
         state.ordersError = action.payload ?? "Unable to load orders.";
       })
 
@@ -187,6 +237,25 @@ const orderSlice = createSlice({
         state.isLoadingDetails = false;
 
         state.detailsError = action.payload ?? "Unable to load order.";
+      })
+
+      .addCase(updateOrderStatus.pending, (state) => {
+        state.isUpdatingStatus = true;
+        state.error = null;
+      })
+
+      .addCase(
+        updateOrderStatus.fulfilled,
+        (state, action: PayloadAction<AdminOrder>) => {
+          state.isUpdatingStatus = false;
+          state.updatedOrder = action.payload;
+          state.error = null;
+        },
+      )
+
+      .addCase(updateOrderStatus.rejected, (state, action) => {
+        state.isUpdatingStatus = false;
+        state.error = action.payload ?? "Failed to update order status.";
       });
   },
 });
@@ -196,6 +265,8 @@ export const {
   clearOrdersError,
   clearOrderDetailsError,
   clearSelectedOrder,
+  clearOrderMutationError,
+  clearUpdatedOrder,
 } = orderSlice.actions;
 
 export default orderSlice.reducer;

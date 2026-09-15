@@ -4,29 +4,27 @@ import { useAppDispatch, useAppSelector } from "@/store/hooks";
 
 import {
   addToCartThunk,
-  getCartThunk,
-  updateCartItemThunk,
-  clearCartThunk,
   clearCartError,
-  resetCart,
-  setCart,
+  clearCartThunk,
+  getCartThunk,
   removeCartItemThunk,
+  updateCartItemThunk,
 } from "../store/cart.slice";
 
 import {
   selectAddingProductId,
   selectCart,
   selectCartError,
-  selectCartItemCount,
   selectCartIsLoading,
+  selectCartItemCount,
   selectCartItems,
   selectCartSubtotal,
   selectIsAddingToCart,
+  selectIsClearingCart,
   selectIsRemovingCartItem,
   selectIsUpdatingCartItem,
   selectRemovingProductId,
   selectUpdatingProductId,
-  selectIsClearingCart,
 } from "../store/cart.selectors";
 
 export const useCart = () => {

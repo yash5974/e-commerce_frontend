@@ -36,14 +36,9 @@ export default function RegisterForm() {
 
   const onSubmit = async (values: RegisterSchema) => {
     const response = await registerUser(values);
-
     if (!response) return;
-
     reset();
-
-    navigate("/login", {
-      replace: true,
-    });
+    navigate("/login", { replace: true });
   };
 
   return (
@@ -103,7 +98,7 @@ export default function RegisterForm() {
         />
       </CardContent>
 
-      <CardFooter className="flex flex-col gap-5">
+      <CardFooter className="flex flex-col gap-5 mt-6">
         <Button type="submit" className="w-full" disabled={isLoading}>
           {isLoading ? "Creating account..." : "Create Account"}
         </Button>

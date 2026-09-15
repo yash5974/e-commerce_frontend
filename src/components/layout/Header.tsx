@@ -2,6 +2,11 @@ import { Bell, ShoppingCart } from "lucide-react";
 import { useMemo } from "react";
 import { Link, useNavigate } from "react-router-dom";
 
+import { selectCartItemCount } from "@/features/cart";
+import { useAppSelector } from "@/store/hooks";
+import { Button } from "@/ui/button";
+import { getUserRole } from "@/utils/helpers";
+
 import DesktopNav from "./DesktopNav";
 import Logo from "./Logo";
 import MobileNav from "./MobileNav";
@@ -13,9 +18,6 @@ import {
   userNavigation,
 } from "./navigation";
 
-import { useAppSelector } from "@/store/hooks";
-import { Button } from "@/ui/button";
-import { getUserRole } from "@/utils/helpers";
 import type { HeaderVariant } from "./types";
 
 interface HeaderProps {
@@ -24,27 +26,31 @@ interface HeaderProps {
 
 export default function Header({ variant = "PUBLIC" }: HeaderProps) {
   const navigate = useNavigate();
+
   const { isLoading } = useAppSelector((state) => state.auth);
+  const cartItemCount = useAppSelector(selectCartItemCount);
 
   const { isAuthenticated, role } = getUserRole();
 
+  const isAuthHeader = variant === "AUTH";
+  const isAdmin = isAuthenticated && role === "ADMIN";
+  const isUser = isAuthenticated && role === "USER";
+
   const navigation = useMemo(() => {
-    if (variant === "AUTH") {
+    if (isAuthHeader) {
       return [];
     }
 
-    if (isAuthenticated) {
-      if (role === "ADMIN") {
-        return adminNavigation;
-      } else if (role === "USER") {
-        return userNavigation;
-      }
+    if (isAdmin) {
+      return adminNavigation;
+    }
+
+    if (isUser) {
+      return userNavigation;
     }
 
     return publicNavigation;
-  }, [variant, isAuthenticated, role, isLoading]);
-
-  const isAuthHeader = variant === "AUTH";
+  }, [isAuthHeader, isAdmin, isUser, isLoading]);
 
   return (
     <header className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur-xl">
@@ -64,23 +70,24 @@ export default function Header({ variant = "PUBLIC" }: HeaderProps) {
       >
         {/* LEFT */}
         <div className="flex min-w-0 items-center gap-2">
-          {!isAuthHeader && <MobileNav items={navigation} />}
+          {!isAuthHeader && (
+            <MobileNav items={navigation} isAuthenticated={isAuthenticated} />
+          )}
 
           <Logo />
         </div>
 
         {/* CENTER */}
-        {!isAuthHeader ? (
+        {!isAuthHeader && (
           <div className="hidden min-w-0 justify-center lg:flex">
             <DesktopNav items={navigation} />
           </div>
-        ) : (
-          <div />
         )}
 
         {/* RIGHT */}
         <div className="flex shrink-0 items-center justify-end gap-2">
-          {!isAuthHeader && isAuthenticated && (
+          {/* USER ONLY */}
+          {isUser && (
             <>
               <Button
                 type="button"
@@ -113,24 +120,26 @@ export default function Header({ variant = "PUBLIC" }: HeaderProps) {
                 <Link to="/cart">
                   <ShoppingCart className="size-5" />
 
-                  <span
-                    className="
-                      absolute
-                      -right-1
-                      -top-1
-                      flex
-                      size-5
-                      items-center
-                      justify-center
-                      rounded-full
-                      bg-primary
-                      text-[10px]
-                      font-medium
-                      text-primary-foreground
-                    "
-                  >
-                    2
-                  </span>
+                  {cartItemCount > 0 && (
+                    <span
+                      className="
+                        absolute
+                        -right-1
+                        -top-1
+                        flex
+                        size-5
+                        items-center
+                        justify-center
+                        rounded-full
+                        bg-primary
+                        text-[10px]
+                        font-medium
+                        text-primary-foreground
+                      "
+                    >
+                      {cartItemCount}
+                    </span>
+                  )}
                 </Link>
               </Button>
 
@@ -138,6 +147,10 @@ export default function Header({ variant = "PUBLIC" }: HeaderProps) {
             </>
           )}
 
+          {/* ADMIN ONLY */}
+          {isAdmin && <UserMenu />}
+
+          {/* OPEN / GUEST ONLY */}
           {!isAuthHeader && !isAuthenticated && (
             <div className="hidden shrink-0 items-center gap-2 sm:flex">
               <Button

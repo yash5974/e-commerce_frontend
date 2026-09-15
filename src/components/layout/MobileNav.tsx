@@ -1,16 +1,18 @@
 import { Menu } from "lucide-react";
 import { NavLink } from "react-router-dom";
+import { useState } from "react";
 
 import { Sheet, SheetContent, SheetTrigger } from "@/ui/sheet";
+
 import Logo from "./Logo";
 import type { NavigationItem } from "./types";
-import { useState } from "react";
 
 interface MobileNavProps {
   items: NavigationItem[];
+  isAuthenticated: boolean;
 }
 
-export default function MobileNav({ items }: MobileNavProps) {
+export default function MobileNav({ items, isAuthenticated }: MobileNavProps) {
   const [open, setOpen] = useState(false);
 
   const handleNavigation = () => {
@@ -52,24 +54,26 @@ export default function MobileNav({ items }: MobileNavProps) {
             ))}
           </nav>
 
-          {/* Login & Register */}
-          <div className="mt-8 flex flex-col gap-2 border-t pt-4">
-            <NavLink
-              to={"/login"}
-              onClick={handleNavigation}
-              className="rounded-lg px-4 py-3 font-medium transition-colors"
-            >
-              Login
-            </NavLink>
+          {/* Guest Actions */}
+          {!isAuthenticated && (
+            <div className="mt-8 flex flex-col gap-2 border-t pt-4">
+              <NavLink
+                to="/login"
+                onClick={handleNavigation}
+                className="rounded-lg px-4 py-3 font-medium transition-colors hover:bg-muted"
+              >
+                Login
+              </NavLink>
 
-            <NavLink
-              to={"/register"}
-              onClick={handleNavigation}
-              className="rounded-lg px-4 py-3 font-medium transition-colors"
-            >
-              Register
-            </NavLink>
-          </div>
+              <NavLink
+                to="/register"
+                onClick={handleNavigation}
+                className="rounded-lg px-4 py-3 font-medium transition-colors hover:bg-muted"
+              >
+                Register
+              </NavLink>
+            </div>
+          )}
         </SheetContent>
       </Sheet>
     </div>

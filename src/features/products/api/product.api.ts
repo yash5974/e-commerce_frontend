@@ -2,9 +2,14 @@ import { apiClient } from "@/api/client";
 import API_ENDPOINTS from "@/api/endpoints";
 
 import type {
+  ApiResponse,
+  CreateProductPayload,
+  DeleteProductResponse,
+  Product,
   ProductDetailsResponse,
   ProductFilters,
   ProductListResponse,
+  UpdateProductPayload,
 } from "../types/product.type";
 
 export const getProductsApi = (
@@ -62,4 +67,35 @@ export const getProductDetailsApi = (
   return apiClient.get<ProductDetailsResponse>(
     API_ENDPOINTS.PRODUCTS.DETAILS(id),
   );
+};
+
+export const productApi = {
+  create(payload: CreateProductPayload): Promise<ApiResponse<Product>> {
+    return apiClient.post<ApiResponse<Product>, CreateProductPayload>(
+      API_ENDPOINTS.ADMIN.PRODUCTS.CREATE,
+      payload,
+    );
+  },
+
+  getById(id: string): Promise<ApiResponse<Product>> {
+    return apiClient.get<ApiResponse<Product>>(
+      API_ENDPOINTS.PRODUCTS.DETAILS(id),
+    );
+  },
+
+  update(
+    id: string,
+    payload: UpdateProductPayload,
+  ): Promise<ApiResponse<Product>> {
+    return apiClient.put<ApiResponse<Product>, UpdateProductPayload>(
+      API_ENDPOINTS.ADMIN.PRODUCTS.UPDATE(id),
+      payload,
+    );
+  },
+
+  delete(id: string): Promise<DeleteProductResponse> {
+    return apiClient.delete<DeleteProductResponse>(
+      API_ENDPOINTS.ADMIN.PRODUCTS.DELETE(id),
+    );
+  },
 };

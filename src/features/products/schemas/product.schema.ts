@@ -40,5 +40,188 @@ export const productFiltersSchema = z
     },
   );
 
+// const baseProductSchema = z
+//   .object({
+//     name: z
+//       .string()
+//       .trim()
+//       .min(2, "Product name must contain at least 2 characters")
+//       .max(150, "Product name cannot exceed 150 characters"),
+
+//     description: z
+//       .string()
+//       .trim()
+//       .min(10, "Description must contain at least 10 characters")
+//       .max(5000, "Description cannot exceed 5000 characters"),
+
+//     categoryId: z.string().trim().min(1, "Category is required"),
+
+//     brand: z
+//       .string()
+//       .trim()
+//       .min(2, "Brand must contain at least 2 characters")
+//       .max(100, "Brand cannot exceed 100 characters"),
+
+//     price: z
+//       .number({
+//         error: "Price is required",
+//       })
+//       .finite("Price must be a valid number")
+//       .positive("Price must be greater than 0"),
+
+//     discountPrice: z
+//       .number({
+//         error: "Discount price is required",
+//       })
+//       .finite("Discount price must be a valid number")
+//       .min(0, "Discount price cannot be negative"),
+
+//     stock: z
+//       .number({
+//         error: "Stock is required",
+//       })
+//       .int("Stock must be a whole number")
+//       .min(0, "Stock cannot be negative"),
+
+//     mainImage: z.string().trim().url("Main image must be a valid URL"),
+
+//     galleryImages: z
+//       .array(z.string().trim().url("Gallery image must be a valid URL"))
+//       .max(10, "Maximum 10 gallery images are allowed"),
+
+//     tags: z
+//       .array(
+//         z
+//           .string()
+//           .trim()
+//           .min(1, "Tag cannot be empty")
+//           .max(50, "Tag cannot exceed 50 characters"),
+//       )
+//       .max(20, "Maximum 20 tags are allowed"),
+
+//     isActive: z.boolean(),
+//   })
+//   .superRefine((data, ctx) => {
+//     if (data.discountPrice > data.price) {
+//       ctx.addIssue({
+//         code: "custom",
+//         path: ["discountPrice"],
+//         message: "Discount price cannot be greater than price",
+//       });
+//     }
+//   });
+
+// export const createProductSchema = baseProductSchema.omit({
+//   isActive: true,
+// });
+
+// export const updateProductSchema = baseProductSchema.partial();
+
+const productShape = {
+  name: z
+    .string()
+    .trim()
+    .min(2, "Product name must contain at least 2 characters")
+    .max(150, "Product name cannot exceed 150 characters"),
+
+  description: z
+    .string()
+    .trim()
+    .min(10, "Description must contain at least 10 characters")
+    .max(5000, "Description cannot exceed 5000 characters"),
+
+  categoryId: z.string().trim().min(1, "Category is required"),
+
+  brand: z
+    .string()
+    .trim()
+    .min(2, "Brand must contain at least 2 characters")
+    .max(100, "Brand cannot exceed 100 characters"),
+
+  price: z
+    .number({
+      error: "Price is required",
+    })
+    .finite("Price must be a valid number")
+    .positive("Price must be greater than 0"),
+
+  discountPrice: z
+    .number({
+      error: "Discount price is required",
+    })
+    .finite("Discount price must be a valid number")
+    .min(0, "Discount price cannot be negative"),
+
+  stock: z
+    .number({
+      error: "Stock is required",
+    })
+    .int("Stock must be a whole number")
+    .min(0, "Stock cannot be negative"),
+
+  mainImage: z.string().trim().url("Main image must be a valid URL"),
+
+  galleryImages: z
+    .array(z.string().trim().url("Gallery image must be a valid URL"))
+    .max(10, "Maximum 10 gallery images are allowed"),
+
+  tags: z
+    .array(
+      z
+        .string()
+        .trim()
+        .min(1, "Tag cannot be empty")
+        .max(50, "Tag cannot exceed 50 characters"),
+    )
+    .max(20, "Maximum 20 tags are allowed"),
+
+  isActive: z.boolean(),
+};
+
+const validateProductPrices = (
+  data: z.infer<z.ZodObject<typeof productShape>>,
+  ctx: z.RefinementCtx,
+) => {
+  if (data.discountPrice > data.price) {
+    ctx.addIssue({
+      code: "custom",
+      path: ["discountPrice"],
+      message: "Discount price cannot be greater than price",
+    });
+  }
+};
+
+export const baseProductSchema = z
+  .object(productShape)
+  .superRefine(validateProductPrices);
+
+export const createProductSchema = z
+  .object(productShape)
+  .omit({
+    isActive: true,
+  })
+  .superRefine(validateProductPrices);
+
+export const updateProductSchema = z
+  .object(productShape)
+  .partial()
+  .superRefine((data, ctx) => {
+    // Only validate the price relationship when both values are provided
+    if (
+      data.price !== undefined &&
+      data.discountPrice !== undefined &&
+      data.discountPrice > data.price
+    ) {
+      ctx.addIssue({
+        code: "custom",
+        path: ["discountPrice"],
+        message: "Discount price cannot be greater than price",
+      });
+    }
+  });
+
+export type CreateProductFormValues = z.infer<typeof createProductSchema>;
+export type UpdateProductFormValues = z.infer<typeof updateProductSchema>;
+
 export type ProductFiltersInput = z.input<typeof productFiltersSchema>;
 export type ProductFiltersOutput = z.output<typeof productFiltersSchema>;

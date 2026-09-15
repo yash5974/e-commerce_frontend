@@ -1,3 +1,7 @@
+import type {
+  PaymentProvider,
+  PaymentStatus as PaymentStatusEnum,
+} from "@/features/payments/types/payment.type";
 export const ORDER_STATUSES = ["PENDING", "PAID", "FAILED", "SHIPPED"] as const;
 
 export type OrderStatus = (typeof ORDER_STATUSES)[number];
@@ -14,7 +18,11 @@ export interface Order {
   userId: string;
   status: OrderStatus;
   totalAmount: number;
-  paymentId?: string;
+  paymentId?: {
+    _id: string;
+    provider: PaymentProvider;
+    status: PaymentStatusEnum;
+  };
   items: OrderItem[];
   createdAt: string;
 }
@@ -37,3 +45,50 @@ export interface ApiResponse<T> {
 export type CreateOrderResponse = ApiResponse<Order>;
 export type GetOrdersResponse = ApiResponse<Order[]>;
 export type GetOrderDetailsResponse = ApiResponse<Order>;
+
+export interface AdminOrderItem {
+  productId: string;
+  name: string;
+  price: number;
+  quantity: number;
+}
+
+export interface AdminOrder {
+  _id: string;
+  userId: string;
+  status: OrderStatus;
+  totalAmount: number;
+  paymentId?: string;
+  items: AdminOrderItem[];
+  createdAt: string;
+}
+
+export interface AdminOrderFiltersInt {
+  page?: number;
+  limit?: number;
+  status?: OrderStatus;
+}
+
+export interface AdminOrdersMeta {
+  page: number;
+  limit: number;
+  total: number;
+  totalPages: number;
+}
+
+export interface AdminOrdersResponse {
+  success: boolean;
+  message: string;
+  data: AdminOrder[];
+  meta: AdminOrdersMeta;
+}
+
+export interface UpdateOrderStatusRequest {
+  status: OrderStatus;
+}
+
+export interface UpdateOrderStatusResponse {
+  success: boolean;
+  message: string;
+  data: AdminOrder;
+}

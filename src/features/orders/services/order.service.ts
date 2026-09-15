@@ -2,9 +2,17 @@ import {
   createOrderApi,
   getMyOrdersApi,
   getOrderDetailsApi,
+  orderApi,
 } from "../api/order.api";
 
-import type { CreateOrderRequest, Order } from "../types/order.type";
+import type {
+  AdminOrderFiltersInt,
+  AdminOrdersResponse,
+  CreateOrderRequest,
+  Order,
+  UpdateOrderStatusRequest,
+  UpdateOrderStatusResponse,
+} from "../types/order.type";
 
 export const createOrderService = async (
   payload: CreateOrderRequest,
@@ -26,4 +34,16 @@ export const getOrderDetailsService = async (
   const response = await getOrderDetailsApi(orderId);
 
   return response.data;
+};
+
+export const orderService = {
+  getAdminOrders(filters?: AdminOrderFiltersInt): Promise<AdminOrdersResponse> {
+    return orderApi.getAdminOrders(filters);
+  },
+  updateOrderStatus(
+    orderId: string,
+    body: UpdateOrderStatusRequest,
+  ): Promise<UpdateOrderStatusResponse> {
+    return orderApi.updateOrderStatus(orderId, body);
+  },
 };

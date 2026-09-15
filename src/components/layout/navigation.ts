@@ -1,66 +1,73 @@
-import {
-  Home,
-  ShoppingBag,
-  LayoutGrid,
-  Phone,
-  Info,
-  User,
-  Shield,
-} from "lucide-react";
-
+import { BarChart3, Info, Package, ShoppingBag, User } from "lucide-react";
 import type { NavigationItem } from "./types";
 
+/**
+ * Public / Guest Navigation
+ *
+ * Routes available without authentication.
+ */
 export const publicNavigation: NavigationItem[] = [
-  {
-    title: "Home",
-    href: "/",
-    icon: Home,
-  },
   {
     title: "Products",
     href: "/products",
     icon: ShoppingBag,
   },
   {
-    title: "Categories",
-    href: "/categories",
-    icon: LayoutGrid,
-  },
-  {
     title: "About",
     href: "/about",
     icon: Info,
   },
-  {
-    title: "Contact",
-    href: "/contact",
-    icon: Phone,
-  },
 ];
 
+/**
+ * Authenticated User Navigation
+ *
+ * Public routes remain accessible to the user,
+ * plus user-specific protected routes.
+ */
 export const userNavigation: NavigationItem[] = [
   ...publicNavigation,
   {
-    title: "Dashboard",
-    href: "/dashboard",
+    title: "Orders",
+    href: "/orders",
+    icon: Package,
+  },
+  {
+    title: "Profile",
+    href: "/profile",
     icon: User,
   },
 ];
 
+/**
+ * Admin Navigation
+ *
+ * Only routes that actually exist under AdminRoute.
+ */
 export const adminNavigation: NavigationItem[] = [
-  {
-    title: "Dashboard",
-    href: "/admin",
-    icon: Shield,
-  },
   {
     title: "Products",
     href: "/admin/products",
     icon: ShoppingBag,
   },
   {
-    title: "Categories",
-    href: "/admin/categories",
-    icon: LayoutGrid,
+    title: "Orders",
+    href: "/admin/orders",
+    icon: Package,
+  },
+  {
+    title: "Sales",
+    href: "/admin/analytics/sales",
+    icon: BarChart3,
+  },
+  {
+    title: "Revenue",
+    href: "/admin/analytics/revenue",
+    icon: BarChart3,
+  },
+  {
+    title: "Top Products",
+    href: "/admin/analytics/top-products",
+    icon: BarChart3,
   },
 ];

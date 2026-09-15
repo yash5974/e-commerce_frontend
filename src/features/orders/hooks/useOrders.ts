@@ -1,18 +1,20 @@
 import { useCallback } from "react";
 
 import { clearOrdersError, fetchMyOrders } from "../store/order.slice";
+
 import { useAppDispatch, useAppSelector } from "@/store/hooks";
 
 export const useOrders = () => {
   const dispatch = useAppDispatch();
 
   const orders = useAppSelector((state) => state.orders.orders);
-
   const isLoading = useAppSelector((state) => state.orders.isLoadingOrders);
-
   const error = useAppSelector((state) => state.orders.ordersError);
+  const requestStatus = useAppSelector(
+    (state) => state.orders.ordersRequestStatus,
+  );
 
-  const loadOrders = useCallback(async () => {
+  const fetchOrders = useCallback(async () => {
     return dispatch(fetchMyOrders()).unwrap();
   }, [dispatch]);
 
@@ -24,7 +26,8 @@ export const useOrders = () => {
     orders,
     isLoading,
     error,
-    fetchOrders: loadOrders,
+    fetchOrders,
+    requestStatus,
     dismissError,
   };
 };

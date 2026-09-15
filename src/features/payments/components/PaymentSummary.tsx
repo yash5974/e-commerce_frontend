@@ -1,38 +1,28 @@
-import type { PaymentIntent } from "../types/payment.type";
-
-interface PaymentSummaryProps {
-  intent: PaymentIntent;
-}
+import type { PaymentSummaryProps } from "../types/payment.type";
 
 export default function PaymentSummary({ intent }: PaymentSummaryProps) {
   return (
     <div className="rounded-xl border p-6">
-      <h2 className="text-lg font-semibold">Payment Summary</h2>
+      <div className="flex items-center justify-between">
+        <div>
+          <p className="text-sm text-muted-foreground">Order ID</p>
 
-      <div className="mt-6 space-y-3">
-        <div className="flex items-center justify-between">
-          <span className="text-sm text-muted-foreground">Provider</span>
-
-          <span className="font-medium capitalize">{intent.provider}</span>
+          <p className="mt-1 font-medium">{intent.orderId}</p>
         </div>
 
-        <div className="flex items-center justify-between">
-          <span className="text-sm text-muted-foreground">Payment ID</span>
+        <div className="text-right">
+          <p className="text-sm text-muted-foreground">Amount</p>
 
-          <span className="max-w-48 truncate text-sm font-medium">
-            {intent.paymentId}
-          </span>
+          <p className="mt-1 text-xl font-bold">
+            ₹{intent.amount.toLocaleString("en-IN")}
+          </p>
         </div>
+      </div>
 
-        <div className="border-t pt-4">
-          <div className="flex items-center justify-between">
-            <span className="font-semibold">Amount</span>
+      <div className="mt-5 border-t pt-4">
+        <p className="text-sm text-muted-foreground">Payment provider</p>
 
-            <span className="text-xl font-bold">
-              ₹{intent.amount.toLocaleString("en-IN")}
-            </span>
-          </div>
-        </div>
+        <p className="mt-1 font-medium capitalize">{intent.provider}</p>
       </div>
     </div>
   );

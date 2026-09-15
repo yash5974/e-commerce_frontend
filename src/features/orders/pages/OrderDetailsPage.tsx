@@ -1,6 +1,10 @@
-import { useEffect } from "react";
-import { Link, useParams } from "react-router-dom";
+// features/orders/pages/OrderDetailsPage.tsx
 
+import { useEffect } from "react";
+import { Link, useNavigate, useParams } from "react-router-dom";
+
+import { PaymentStatus } from "@/features/payments/types/payment.type";
+import RetryPaymentButton from "@/features/payments/components/RetryPaymentButton";
 import { Button } from "@/ui/button";
 
 import OrderItems from "../components/OrderItems";
@@ -10,6 +14,7 @@ import { useOrder } from "../hooks/useOrder";
 
 export default function OrderDetailsPage() {
   const { id } = useParams<{ id: string }>();
+  const navigate = useNavigate();
 
   const { order, isLoading, error, fetchOrder, dismissError } = useOrder(
     id ?? "",
@@ -59,6 +64,17 @@ export default function OrderDetailsPage() {
     );
   }
 
+  const canRetryPayment =
+    Boolean(order.paymentId && order.paymentId?._id) &&
+    order.paymentId?.status === PaymentStatus.FAILED;
+
+  const handleRetryPayment = () => {
+    if (!order.paymentId?._id) {
+      return;
+    }
+    navigate(`/payments/${order.paymentId._id}/retry`);
+  };
+
   return (
     <main className="container mx-auto px-4 py-10">
       <div className="mb-8">
@@ -85,10 +101,18 @@ export default function OrderDetailsPage() {
         <div className="space-y-4">
           <OrderSummary order={order} />
 
-          {order.status === "PENDING" && (
-            <Button className="w-full">
-              <Link to={`/payment/${order._id}`}>Continue to Payment</Link>
-            </Button>
+          {canRetryPayment ? (
+            <RetryPaymentButton
+              onRetry={handleRetryPayment}
+              isRetrying={false}
+              disabled={!order.paymentId?._id}
+            />
+          ) : (
+            order.status === "PENDING" && (
+              <Button className="w-full">
+                <Link to={`/payment/${order._id}`}>Continue to Payment</Link>
+              </Button>
+            )
           )}
         </div>
       </div>

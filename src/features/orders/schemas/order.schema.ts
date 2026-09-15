@@ -12,4 +12,19 @@ export const createOrderSchema = z.object({
   items: z.array(createOrderItemSchema).min(1, "Your cart is empty."),
 });
 
+export const orderStatusSchema = z.enum([
+  "PENDING",
+  "PAID",
+  "FAILED",
+  "SHIPPED",
+]);
+
+export const updateOrderStatusSchema = z.object({
+  status: orderStatusSchema,
+});
+
+export type UpdateOrderStatusFormValues = z.infer<
+  typeof updateOrderStatusSchema
+>;
+
 export type CreateOrderFormValues = z.infer<typeof createOrderSchema>;

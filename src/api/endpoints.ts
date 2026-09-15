@@ -7,6 +7,9 @@ export const API_ENDPOINTS = {
     REFRESH: "/auth/refresh",
     ME: "/auth/me",
     LOGOUT: "/auth/logout",
+    FORGOT: "/auth/forgot-password",
+    RESET: "/auth/reset-password",
+    NEW: "/auth/new-password",
   },
 
   PRODUCTS: {
@@ -30,7 +33,16 @@ export const API_ENDPOINTS = {
 
   PAYMENTS: {
     INTENT: "/payments/intent",
-    WEBHOOK: "/webhook/payment",
+    GET: (paymentId: string) => `/payments/${paymentId}`,
+    DETAILS: (paymentId: string) => `/payments/${paymentId}`,
+    STATUS: (paymentId: string) => `/payments/${paymentId}/status`,
+    RETRY: (paymentId: string) => `/payments/${paymentId}/retry`,
+    REFUND: (paymentId: string) => `/payments/${paymentId}/refund`,
+  },
+
+  WEBHOOK: {
+    STRIPE: "/webhook/stripe",
+    RAZORPAY: "/webhook/razorpay",
   },
 
   ADMIN: {

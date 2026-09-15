@@ -3,11 +3,11 @@ import { Navigate, Outlet, useLocation } from "react-router-dom";
 import { useAppSelector } from "@/store/hooks";
 import { getUserRole } from "@/utils/helpers";
 
-export default async function AdminRoute() {
+export default function AdminRoute() {
   const { isLoading } = useAppSelector((state) => state.auth);
 
   const location = useLocation();
-  const { isAuthenticated, role } = await getUserRole();
+  const { isAuthenticated, role } = getUserRole();
 
   if (isLoading) {
     return <div>Loading...</div>;

@@ -1,11 +1,37 @@
 import { createBrowserRouter } from "react-router-dom";
 
-import { LoginPage, RegisterPage } from "@/features/auth";
+import {
+  AdminRevenueAnalyticsPage,
+  AdminSalesAnalyticsPage,
+  AdminTopProductsAnalyticsPage,
+} from "@/features/analytics";
+import {
+  ForgotPasswordPage,
+  LoginPage,
+  NewPasswordPage,
+  RegisterPage,
+  VerifyOtpPage,
+} from "@/features/auth";
 import { CartPage } from "@/features/cart";
-import CheckoutPage from "@/features/orders/pages/CheckoutPage";
-import OrderDetailsPage from "@/features/orders/pages/OrderDetailsPage";
-import OrdersPage from "@/features/orders/pages/OrdersPage";
-import { ProductDetailsPage, ProductsPage } from "@/features/products";
+import {
+  AdminOrdersPage,
+  CheckoutPage,
+  OrderDetailsPage,
+  OrdersPage,
+} from "@/features/orders";
+import {
+  AdminPaymentDetailsPage,
+  PaymentPage,
+  PaymentResultPage,
+} from "@/features/payments";
+import RetryPaymentPage from "@/features/payments/pages/RetryPaymentPage";
+import {
+  AdminProductCreatePage,
+  AdminProductEditPage,
+  ProductDetailsPage,
+  ProductsPage,
+} from "@/features/products";
+import AdminProductsPage from "@/features/products/pages/AdminProductsPage";
 import ProductPage from "@/features/products/pages/ProductPage";
 import ProfilePage from "@/features/profile/pages/ProfilePage";
 import AdminLayout from "@/layouts/AdminLayout";
@@ -17,7 +43,7 @@ import Unauthorized from "@/pages/Unauthorized";
 import AdminRoute from "./AdminRoute";
 import GuestRoute from "./GuestRoute";
 import ProtectedRoute from "./ProtectedRoute";
-import { PaymentPage } from "@/features/payments";
+import About from "@/pages/About";
 
 const AppRouter = createBrowserRouter([
   /**
@@ -38,6 +64,10 @@ const AppRouter = createBrowserRouter([
         path: "/products/:id",
         element: <ProductDetailsPage />,
       },
+      {
+        path: "/about",
+        element: <About />,
+      },
     ],
   },
 
@@ -57,6 +87,18 @@ const AppRouter = createBrowserRouter([
           {
             path: "/register",
             element: <RegisterPage />,
+          },
+          {
+            path: "/forgot-password",
+            element: <ForgotPasswordPage />,
+          },
+          {
+            path: "/reset-password",
+            element: <VerifyOtpPage />,
+          },
+          {
+            path: "/new-password",
+            element: <NewPasswordPage />,
           },
         ],
       },
@@ -96,6 +138,14 @@ const AppRouter = createBrowserRouter([
             path: "/payment/:orderId",
             element: <PaymentPage />,
           },
+          {
+            path: "/payments/:paymentId",
+            element: <PaymentResultPage />,
+          },
+          {
+            path: "/payments/:paymentId/retry",
+            element: <RetryPaymentPage />,
+          },
         ],
       },
     ],
@@ -109,12 +159,40 @@ const AppRouter = createBrowserRouter([
     children: [
       {
         element: <AdminLayout />,
-        // children: [
-        //   {
-        //     path: "/admin",
-        //     element: <AdminDashboardPage />,
-        //   },
-        // ],
+        children: [
+          {
+            path: "/admin/products",
+            element: <AdminProductsPage />,
+          },
+          {
+            path: "/admin/products/new",
+            element: <AdminProductCreatePage />,
+          },
+          {
+            path: "/admin/products/:id/edit",
+            element: <AdminProductEditPage />,
+          },
+          {
+            path: "/admin/orders",
+            element: <AdminOrdersPage />,
+          },
+          {
+            path: "/admin/payments/:paymentId",
+            element: <AdminPaymentDetailsPage />,
+          },
+          {
+            path: "/admin/analytics/sales",
+            element: <AdminSalesAnalyticsPage />,
+          },
+          {
+            path: "/admin/analytics/revenue",
+            element: <AdminRevenueAnalyticsPage />,
+          },
+          {
+            path: "/admin/analytics/top-products",
+            element: <AdminTopProductsAnalyticsPage />,
+          },
+        ],
       },
     ],
   },

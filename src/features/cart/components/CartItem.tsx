@@ -9,10 +9,6 @@ interface CartItemProps {
   item: CartItemType;
 }
 
-// const getUnitPrice = (price: number, discountPrice: number): number => {
-//   return discountPrice > 0 ? discountPrice : price;
-// };
-
 const toSafeNumber = (
   value: number | null | undefined,
   fallback = 0,

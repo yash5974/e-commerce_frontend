@@ -1,18 +1,39 @@
-import { useMemo } from "react";
+import { useEffect, useMemo } from "react";
 import { Link, useNavigate } from "react-router-dom";
 
+import { useCart } from "@/features/cart/hooks/useCart";
 import { Button } from "@/ui/button";
 
-import { useCart } from "@/features/cart/hooks/useCart";
-
 import { useCreateOrder } from "../hooks/useCreateOrder";
+import { createOrderSchema } from "../schemas/order.schema";
 
 export default function CheckoutPage() {
   const navigate = useNavigate();
 
-  const { items, itemCount, subtotal, isLoading } = useCart();
+  const {
+    cart,
+    items,
+    itemCount,
+    isLoading: isCartLoading,
+    error: cartError,
+    fetchCart,
+    dismissError: dismissCartError,
+  } = useCart();
 
-  const { isCreating, error, submitOrder, dismissError } = useCreateOrder();
+  const {
+    isCreating,
+    error: orderError,
+    submitOrder,
+    dismissError: dismissOrderError,
+  } = useCreateOrder();
+
+  useEffect(() => {
+    if (cart) {
+      return;
+    }
+
+    void fetchCart();
+  }, [cart, fetchCart]);
 
   const orderItems = useMemo(
     () =>
@@ -23,28 +44,88 @@ export default function CheckoutPage() {
     [items],
   );
 
+  const validationError = useMemo(() => {
+    if (items.length === 0) {
+      return "Your cart is empty.";
+    }
+
+    const schemaResult = createOrderSchema.safeParse({
+      items: orderItems,
+    });
+
+    if (!schemaResult.success) {
+      return schemaResult.error.issues[0]?.message ?? "Invalid cart items.";
+    }
+
+    for (const item of items) {
+      const product = item.productId;
+
+      if (product.stock < 1) {
+        return `${product.name} is currently out of stock.`;
+      }
+
+      if (item.quantity > product.stock) {
+        return `Only ${product.stock} unit${
+          product.stock === 1 ? "" : "s"
+        } of ${product.name} ${product.stock === 1 ? "is" : "are"} available.`;
+      }
+    }
+
+    return null;
+  }, [items, orderItems]);
+
   const handlePlaceOrder = async () => {
-    if (orderItems.length === 0 || isCreating) {
+    if (isCreating || validationError) {
       return;
     }
+
+    dismissOrderError();
 
     try {
       const order = await submitOrder({
         items: orderItems,
       });
 
-      navigate(`/orders/${order._id}`, {
+      navigate(`/payment/${order._id}`, {
         replace: true,
       });
     } catch {
-      // Error is stored in Redux state.
+      // The existing Order store owns the create-order error.
     }
   };
 
-  if (isLoading && items.length === 0) {
+  if (isCartLoading && !cart) {
     return (
       <main className="container mx-auto px-4 py-10">
         <p>Loading checkout...</p>
+      </main>
+    );
+  }
+
+  if (cartError && !cart) {
+    return (
+      <main className="container mx-auto px-4 py-10">
+        <div className="mx-auto max-w-xl text-center">
+          <h1 className="text-2xl font-semibold">Unable to load your cart</h1>
+
+          <p className="mt-2 text-sm text-destructive">{cartError}</p>
+
+          <div className="mt-6 flex justify-center gap-3">
+            <Button
+              type="button"
+              onClick={() => {
+                dismissCartError();
+                void fetchCart();
+              }}
+            >
+              Try Again
+            </Button>
+
+            <Button variant="outline">
+              <Link to="/cart">View Cart</Link>
+            </Button>
+          </div>
+        </div>
       </main>
     );
   }
@@ -67,28 +148,35 @@ export default function CheckoutPage() {
     );
   }
 
+  const displayError = validationError ?? orderError;
+
   return (
     <main className="container mx-auto px-4 py-10">
       <div className="mb-8">
         <h1 className="text-3xl font-bold">Checkout</h1>
 
         <p className="mt-1 text-sm text-muted-foreground">
-          Review your order before placing it.
+          Review your items before placing the order.
         </p>
       </div>
 
-      {error && (
-        <div className="mb-6 flex items-center justify-between gap-4 rounded-lg border border-destructive/30 bg-destructive/5 p-4">
-          <p className="text-sm text-destructive">{error}</p>
+      {displayError && (
+        <div
+          className="mb-6 flex items-center justify-between gap-4 rounded-lg border border-destructive/30 bg-destructive/5 p-4"
+          role="alert"
+        >
+          <p className="text-sm text-destructive">{displayError}</p>
 
-          <Button
-            type="button"
-            variant="ghost"
-            size="sm"
-            onClick={dismissError}
-          >
-            Dismiss
-          </Button>
+          {!validationError && (
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              onClick={dismissOrderError}
+            >
+              Dismiss
+            </Button>
+          )}
         </div>
       )}
 
@@ -99,11 +187,6 @@ export default function CheckoutPage() {
           <div className="divide-y rounded-xl border">
             {items.map((item) => {
               const product = item.productId;
-
-              const unitPrice =
-                product.discountPrice > 0
-                  ? product.discountPrice
-                  : product.price;
 
               return (
                 <div key={product._id} className="flex gap-4 p-4">
@@ -120,9 +203,11 @@ export default function CheckoutPage() {
                       Quantity: {item.quantity}
                     </p>
 
-                    <p className="mt-2 font-semibold">
-                      ₹{(unitPrice * item.quantity).toLocaleString("en-IN")}
-                    </p>
+                    {item.quantity > product.stock && (
+                      <p className="mt-1 text-sm text-destructive">
+                        Only {product.stock} available.
+                      </p>
+                    )}
                   </div>
                 </div>
               );
@@ -135,31 +220,23 @@ export default function CheckoutPage() {
 
           <div className="mt-6 flex items-center justify-between">
             <span className="text-muted-foreground">Items</span>
-
             <span>{itemCount}</span>
-          </div>
-
-          <div className="mt-3 flex items-center justify-between">
-            <span className="text-muted-foreground">Subtotal</span>
-
-            <span>₹{subtotal.toLocaleString("en-IN")}</span>
           </div>
 
           <div className="my-6 border-t" />
 
-          <div className="flex items-center justify-between">
-            <span className="font-semibold">Total</span>
-
-            <span className="text-xl font-bold">
-              ₹{subtotal.toLocaleString("en-IN")}
-            </span>
-          </div>
+          <p className="text-sm text-muted-foreground">
+            The final order amount, prices, product data, and stock will be
+            validated by the server.
+          </p>
 
           <Button
             type="button"
             className="mt-6 w-full"
-            disabled={isCreating}
-            onClick={handlePlaceOrder}
+            disabled={isCreating || Boolean(validationError)}
+            onClick={() => {
+              void handlePlaceOrder();
+            }}
           >
             {isCreating ? "Creating Order..." : "Place Order"}
           </Button>

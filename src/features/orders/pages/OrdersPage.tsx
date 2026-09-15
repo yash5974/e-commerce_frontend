@@ -7,11 +7,16 @@ import OrderCard from "../components/OrderCard";
 import { useOrders } from "../hooks/useOrders";
 
 export default function OrdersPage() {
-  const { orders, isLoading, error, fetchOrders, dismissError } = useOrders();
+  const { orders, requestStatus, isLoading, error, fetchOrders, dismissError } =
+    useOrders();
 
   useEffect(() => {
+    if (requestStatus !== "idle") {
+      return;
+    }
+
     void fetchOrders();
-  }, [fetchOrders]);
+  }, [fetchOrders, requestStatus]);
 
   if (isLoading && orders.length === 0) {
     return (

@@ -1,36 +1,75 @@
-import { useCallback } from "react";
+import { useCallback, useState } from "react";
 
-import { useAppDispatch, useAppSelector } from "@/store/hooks";
-import {
-  clearPaymentIntentError,
-  createPaymentIntent,
-} from "../store/payment.slice";
+import { createPaymentIntentService } from "../services/payment.service";
+import type { PaymentIntent, PaymentProvider } from "../types/payment.type";
 
-export const useCreatePaymentIntent = () => {
-  const dispatch = useAppDispatch();
+interface UseCreatePaymentIntentReturn {
+  intent: PaymentIntent | null;
+  isCreatingIntent: boolean;
+  error: string | null;
 
-  const intent = useAppSelector((state) => state.payments.intent);
+  createIntent: (
+    orderId: string,
+    provider: PaymentProvider,
+  ) => Promise<PaymentIntent | null>;
 
-  const isCreatingIntent = useAppSelector(
-    (state) => state.payments.isCreatingIntent,
-  );
+  dismissError: () => void;
+  reset: () => void;
+}
 
-  const error = useAppSelector((state) => state.payments.intentError);
+function getErrorMessage(error: unknown): string {
+  if (error instanceof Error && error.message) {
+    return error.message;
+  }
+
+  return "Unable to initialize payment. Please try again.";
+}
+
+export function useCreatePaymentIntent(): UseCreatePaymentIntentReturn {
+  const [intent, setIntent] = useState<PaymentIntent | null>(null);
+  const [isCreatingIntent, setIsCreatingIntent] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   const createIntent = useCallback(
-    async (orderId: string) => {
-      return dispatch(
-        createPaymentIntent({
+    async (
+      orderId: string,
+      provider: PaymentProvider,
+    ): Promise<PaymentIntent | null> => {
+      setIsCreatingIntent(true);
+      setError(null);
+
+      try {
+        const result = await createPaymentIntentService({
           orderId,
-        }),
-      ).unwrap();
+          provider,
+        });
+
+        setIntent(result);
+
+        return result;
+      } catch (error: unknown) {
+        const message = getErrorMessage(error);
+
+        setError(message);
+        setIntent(null);
+
+        return null;
+      } finally {
+        setIsCreatingIntent(false);
+      }
     },
-    [dispatch],
+    [],
   );
 
   const dismissError = useCallback(() => {
-    dispatch(clearPaymentIntentError());
-  }, [dispatch]);
+    setError(null);
+  }, []);
+
+  const reset = useCallback(() => {
+    setIntent(null);
+    setError(null);
+    setIsCreatingIntent(false);
+  }, []);
 
   return {
     intent,
@@ -38,5 +77,6 @@ export const useCreatePaymentIntent = () => {
     error,
     createIntent,
     dismissError,
+    reset,
   };
-};
+}

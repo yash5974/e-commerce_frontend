@@ -101,3 +101,37 @@ export interface ProductDetailsResponse {
   message: string;
   data: ProductDetails;
 }
+
+export interface CreateProductPayload {
+  name: string;
+  description: string;
+  categoryId: string;
+  brand: string;
+  price: number;
+  discountPrice: number;
+  stock: number;
+  mainImage: string;
+  galleryImages: string[];
+  tags: string[];
+}
+
+export interface UpdateProductPayload {
+  name?: string;
+  description?: string;
+  categoryId?: string;
+  brand?: string;
+  price?: number;
+  discountPrice?: number;
+  stock?: number;
+  mainImage?: string;
+  galleryImages?: string[];
+  tags?: string[];
+  isActive?: boolean;
+}
+
+export type DeleteProductResponse = ApiResponse<null>;
+export interface ApiResponse<T> {
+  success: boolean;
+  message: string;
+  data: T;
+}
