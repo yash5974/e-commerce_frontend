@@ -62,11 +62,9 @@ export const useVerifyOtp = (): UseVerifyOtpResult => {
 
           return false;
         }
-        console.log("response: ", response);
 
         setResetToken(response.result?.resetToken ?? null);
         toast.success(response.message || "OTP verified successfully.");
-        console.log("response: ", response);
         navigate("/new-password", {
           state: {
             userId: response.result?.userId,

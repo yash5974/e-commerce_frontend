@@ -47,6 +47,9 @@ export interface ProductListResponse {
 export interface Product {
   _id: string;
   name: string;
+  description: string;
+  categoryId: string;
+  tags: string[];
   slug: string;
   brand: string;
   price: number;
@@ -110,8 +113,8 @@ export interface CreateProductPayload {
   price: number;
   discountPrice: number;
   stock: number;
-  mainImage: string;
-  galleryImages: string[];
+  mainImage: File;
+  galleryImages: File[];
   tags: string[];
 }
 
@@ -123,8 +126,8 @@ export interface UpdateProductPayload {
   price?: number;
   discountPrice?: number;
   stock?: number;
-  mainImage?: string;
-  galleryImages?: string[];
+  mainImage?: File;
+  galleryImages?: File[];
   tags?: string[];
   isActive?: boolean;
 }

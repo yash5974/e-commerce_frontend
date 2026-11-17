@@ -31,19 +31,19 @@ import {
   ProductDetailsPage,
   ProductsPage,
 } from "@/features/products";
-import AdminProductsPage from "@/features/products/pages/AdminProductsPage";
 import ProductPage from "@/features/products/pages/ProductPage";
 import ProfilePage from "@/features/profile/pages/ProfilePage";
 import AdminLayout from "@/layouts/AdminLayout";
 import AuthLayout from "@/layouts/AuthLayout";
 import PublicLayout from "@/layouts/PublicLayout";
 import UserLayout from "@/layouts/UserLayout";
+import About from "@/pages/About";
 import Notfound from "@/pages/Notfound";
 import Unauthorized from "@/pages/Unauthorized";
 import AdminRoute from "./AdminRoute";
 import GuestRoute from "./GuestRoute";
 import ProtectedRoute from "./ProtectedRoute";
-import About from "@/pages/About";
+import UnderDevelopmentPage from "@/pages/UnderDevelopmentPage";
 
 const AppRouter = createBrowserRouter([
   /**
@@ -162,12 +162,17 @@ const AppRouter = createBrowserRouter([
         children: [
           {
             path: "/admin/products",
-            element: <AdminProductsPage />,
-          },
-          {
-            path: "/admin/products/new",
             element: <AdminProductCreatePage />,
           },
+          // {
+          //   path: "/admin/products",
+          //   element: (
+          //     <UnderDevelopmentPage
+          //       title="Add Product"
+          //       description="Our adding product is currently under development. Stay tuned!"
+          //     />
+          //   ),
+          // },
           {
             path: "/admin/products/:id/edit",
             element: <AdminProductEditPage />,

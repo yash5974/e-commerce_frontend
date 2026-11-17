@@ -17,7 +17,7 @@ const formatCurrency = (amountInMinorUnits: number) =>
   new Intl.NumberFormat("en-IN", {
     style: "currency",
     currency: "INR",
-  }).format(amountInMinorUnits / 100);
+  }).format(amountInMinorUnits);
 
 const formatDate = (date: string) =>
   new Intl.DateTimeFormat("en-IN", {

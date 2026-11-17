@@ -38,7 +38,9 @@ const getErrorMessage = (error: unknown): string => {
 export const createPaymentIntent = createAsyncThunk<
   PaymentIntent,
   CreatePaymentIntentRequest,
-  { rejectValue: string }
+  {
+    rejectValue: string;
+  }
 >("payments/createPaymentIntent", async (payload, { rejectWithValue }) => {
   try {
     return await createPaymentIntentService(payload);

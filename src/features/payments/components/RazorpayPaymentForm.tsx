@@ -22,7 +22,11 @@ interface RazorpayInstance {
 
   on: (
     event: string,
-    handler: (response: { error?: { description?: string } }) => void,
+    handler: (response: {
+      error?: {
+        description?: string;
+      };
+    }) => void,
   ) => void;
 }
 
@@ -40,6 +44,7 @@ interface RazorpayOptions {
   description: string;
   order_id: string;
   handler: (response: RazorpaySuccessResponse) => void;
+
   modal?: {
     ondismiss?: () => void;
   };
@@ -57,14 +62,21 @@ function loadRazorpayScript(): Promise<boolean> {
     );
 
     if (existingScript) {
-      existingScript.addEventListener("load", () => resolve(true));
-      existingScript.addEventListener("error", () => resolve(false));
+      existingScript.addEventListener("load", () => resolve(true), {
+        once: true,
+      });
+
+      existingScript.addEventListener("error", () => resolve(false), {
+        once: true,
+      });
+
       return;
     }
 
     const script = document.createElement("script");
 
     script.src = "https://checkout.razorpay.com/v1/checkout.js";
+
     script.async = true;
 
     script.onload = () => resolve(true);
@@ -108,24 +120,37 @@ export default function RazorpayPaymentForm({
         throw new Error("Unable to load Razorpay Checkout. Please try again.");
       }
 
+      const normalizedOrderId = razorpayOrderId.trim();
+
+      if (!normalizedOrderId) {
+        throw new Error("Razorpay order ID is missing.");
+      }
+
+      if (!Number.isFinite(amount) || amount <= 0) {
+        throw new Error("Invalid payment amount.");
+      }
+
+      const amountInPaise = Math.round(amount * 100);
+
+      if (!Number.isSafeInteger(amountInPaise) || amountInPaise <= 0) {
+        throw new Error("Invalid payment amount.");
+      }
+
+      const razorpayKey = import.meta.env.VITE_RAZORPAY_KEY_ID?.trim();
+
+      if (!razorpayKey) {
+        throw new Error("Razorpay key is not configured.");
+      }
+
       const razorpay = new window.Razorpay({
-        key: import.meta.env.VITE_RAZORPAY_KEY_ID,
-        amount,
+        key: razorpayKey,
+        amount: amountInPaise,
         currency: "INR",
         name: "Your Store",
         description: `Payment for order ${orderId}`,
-        order_id: razorpayOrderId,
+        order_id: normalizedOrderId,
 
-        handler: (response) => {
-          /*
-           * The browser callback confirms that Razorpay Checkout
-           * completed its client-side flow.
-           *
-           * The backend webhook remains authoritative for
-           * updating Payment.status.
-           */
-          console.log("Razorpay payment response:", response);
-
+        handler: () => {
           navigate(`/payments/${paymentId}`, {
             replace: true,
           });
@@ -141,13 +166,15 @@ export default function RazorpayPaymentForm({
       });
 
       razorpay.on("payment.failed", (response) => {
-        if (isMounted.current) {
-          onPaymentError(
-            response.error?.description ?? "Razorpay payment failed.",
-          );
-
-          setIsLoading(false);
+        if (!isMounted.current) {
+          return;
         }
+
+        onPaymentError(
+          response.error?.description ?? "Razorpay payment failed.",
+        );
+
+        setIsLoading(false);
       });
 
       razorpay.open();
@@ -171,8 +198,9 @@ export default function RazorpayPaymentForm({
     >
       {isLoading
         ? "Opening Razorpay..."
-        : `Pay ₹${(amount / 100).toLocaleString("en-IN", {
+        : `Pay ₹${amount.toLocaleString("en-IN", {
             minimumFractionDigits: 2,
+            maximumFractionDigits: 2,
           })}`}
     </Button>
   );

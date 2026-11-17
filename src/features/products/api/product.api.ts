@@ -69,11 +69,37 @@ export const getProductDetailsApi = (
   );
 };
 
+function toCreateProductFormData(payload: CreateProductPayload): FormData {
+  const formData = new FormData();
+
+  formData.append("name", payload.name);
+  formData.append("description", payload.description);
+  formData.append("categoryId", payload.categoryId);
+  formData.append("brand", payload.brand);
+  formData.append("price", String(payload.price));
+  formData.append("discountPrice", String(payload.discountPrice));
+  formData.append("stock", String(payload.stock));
+
+  formData.append("mainImage", payload.mainImage);
+
+  for (const image of payload.galleryImages) {
+    formData.append("galleryImages", image);
+  }
+
+  for (const tag of payload.tags) {
+    formData.append("tags", tag);
+  }
+
+  return formData;
+}
+
 export const productApi = {
   create(payload: CreateProductPayload): Promise<ApiResponse<Product>> {
-    return apiClient.post<ApiResponse<Product>, CreateProductPayload>(
+    const formData = toCreateProductFormData(payload);
+
+    return apiClient.post<ApiResponse<Product>, FormData>(
       API_ENDPOINTS.ADMIN.PRODUCTS.CREATE,
-      payload,
+      formData,
     );
   },
 

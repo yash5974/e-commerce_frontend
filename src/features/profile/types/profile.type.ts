@@ -12,3 +12,14 @@ export interface GetCurrentUserResponse {
   message: string;
   data: CurrentUser;
 }
+
+export interface UpdateProfileRequest {
+  name?: string;
+  email?: string;
+}
+
+export interface UpdateProfileResponse {
+  success: boolean;
+  message: string;
+  data: CurrentUser;
+}

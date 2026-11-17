@@ -2,7 +2,9 @@ import {
   getPaymentApi,
   paymentApi,
   refundPaymentApi,
+  retryPaymentApi,
 } from "../api/payment.api";
+
 import type {
   CreatePaymentIntentRequest,
   Payment,
@@ -12,7 +14,6 @@ import type {
   RefundPaymentRequest,
   RetryPaymentRequest,
 } from "../types/payment.type";
-import { retryPaymentApi } from "./../api/payment.api";
 
 const CREATE_IDEMPOTENCY_PREFIX = "payment:create:";
 const RETRY_IDEMPOTENCY_PREFIX = "payment:retry:";
@@ -20,20 +21,60 @@ const REFUND_IDEMPOTENCY_PREFIX = "payment:refund:";
 
 const getStorageKey = (
   prefix: string,
-  orderId: string,
-  provider: PaymentProvider,
+  id: string,
+  provider?: PaymentProvider,
 ): string => {
-  return `${prefix}${orderId}:${provider}`;
+  return provider ? `${prefix}${id}:${provider}` : `${prefix}${id}`;
 };
 
 const getOrCreateIdempotencyKey = (storageKey: string): string => {
   const existing = sessionStorage.getItem(storageKey);
+
   if (existing) {
     return existing;
   }
+
   const key = crypto.randomUUID();
+
   sessionStorage.setItem(storageKey, key);
+
   return key;
+};
+
+const normalizePayment = (
+  payment: Payment & {
+    id?: string;
+  },
+): Payment => {
+  return {
+    ...payment,
+
+    paymentId: payment.paymentId?.trim() || payment.id?.trim() || "",
+
+    providerPaymentId: payment.providerPaymentId?.trim() || undefined,
+
+    providerOrderId: payment.providerOrderId?.trim() || undefined,
+
+    providerClientSecret: payment.providerClientSecret?.trim() || undefined,
+  };
+};
+
+const normalizePaymentIntent = (
+  payment: PaymentIntent & {
+    id?: string;
+  },
+): PaymentIntent => {
+  return {
+    ...payment,
+
+    paymentId: payment.paymentId?.trim() || payment.id?.trim() || "",
+
+    providerPaymentId: payment.providerPaymentId?.trim() || undefined,
+
+    providerOrderId: payment.providerOrderId?.trim() || undefined,
+
+    providerClientSecret: payment.providerClientSecret?.trim() || undefined,
+  };
 };
 
 export async function createPaymentIntentService(
@@ -53,18 +94,53 @@ export async function createPaymentIntentService(
 
   const idempotencyKey = getOrCreateIdempotencyKey(storageKey);
 
-  const response = await paymentApi.createPaymentIntent(
-    payload,
-    idempotencyKey,
-  );
+  try {
+    const response = await paymentApi.createPaymentIntent(
+      {
+        orderId: normalizedOrderId,
+        provider: payload.provider,
+      },
+      idempotencyKey,
+    );
 
-  if (!response.success || !response.data) {
-    throw new Error(response.message || "Failed to create payment intent");
+    if (!response.success || !response.data) {
+      throw new Error(response.message || "Failed to create payment intent");
+    }
+
+    const paymentIntent = normalizePaymentIntent(response.data);
+
+    if (!paymentIntent.paymentId) {
+      throw new Error("Payment initialization returned an invalid payment ID.");
+    }
+
+    if (
+      paymentIntent.provider === "stripe" &&
+      !paymentIntent.providerClientSecret
+    ) {
+      throw new Error(
+        "Stripe payment initialization returned no client secret.",
+      );
+    }
+
+    if (
+      paymentIntent.provider === "razorpay" &&
+      !paymentIntent.providerOrderId
+    ) {
+      throw new Error("Razorpay payment initialization returned no order ID.");
+    }
+
+    sessionStorage.removeItem(storageKey);
+
+    return paymentIntent;
+  } catch (error) {
+    /**
+     * Keep the idempotency key on failure.
+     *
+     * A repeated request will therefore safely reuse the same
+     * backend idempotency key.
+     */
+    throw error;
   }
-
-  sessionStorage.removeItem(storageKey);
-
-  return response.data;
 }
 
 export const paymentService = {
@@ -77,12 +153,27 @@ export const paymentService = {
 
     const response = await getPaymentApi(normalizedPaymentId);
 
-    return response.data.payment;
+    if (!response.success || !response.data?.payment) {
+      throw new Error(
+        response.message || "Unable to retrieve payment details.",
+      );
+    }
+
+    const payment = normalizePayment(response.data.payment);
+
+    if (!payment.paymentId) {
+      throw new Error("Payment response returned an invalid payment ID.");
+    }
+
+    return payment;
   },
 };
 
 export const retryPaymentService = {
-  async retryPayment(paymentId: string, provider: PaymentProvider) {
+  async retryPayment(
+    paymentId: string,
+    provider: PaymentProvider,
+  ): Promise<Payment> {
     const normalizedPaymentId = paymentId.trim();
 
     if (!normalizedPaymentId) {
@@ -101,15 +192,42 @@ export const retryPaymentService = {
       provider,
     };
 
-    const response = await retryPaymentApi(
-      normalizedPaymentId,
-      payload,
-      idempotencyKey,
-    );
+    try {
+      const response = await retryPaymentApi(
+        normalizedPaymentId,
+        payload,
+        idempotencyKey,
+      );
 
-    sessionStorage.removeItem(storageKey);
+      if (!response.success || !response.data?.payment) {
+        throw new Error(
+          response.message || "Unable to initialize payment retry.",
+        );
+      }
 
-    return response.data.payment;
+      const payment = normalizePayment(response.data.payment);
+
+      if (!payment.paymentId) {
+        throw new Error("Payment retry returned an invalid payment ID.");
+      }
+
+      if (payment.provider === "stripe" && !payment.providerClientSecret) {
+        throw new Error("Stripe retry returned no client secret.");
+      }
+
+      if (payment.provider === "razorpay" && !payment.providerOrderId) {
+        throw new Error("Razorpay retry returned no order ID.");
+      }
+
+      sessionStorage.removeItem(storageKey);
+
+      return payment;
+    } catch (error) {
+      /**
+       * Keep idempotency key on failure.
+       */
+      throw error;
+    }
   },
 };
 
@@ -179,13 +297,16 @@ export async function refundPaymentService(
     );
 
     if (!response.success || !response.data) {
-      throw new Error(response.message ?? "Unable to process refund");
+      throw new Error(response.message || "Unable to process refund.");
     }
 
     sessionStorage.removeItem(storageKey);
 
     return response.data;
   } catch (error) {
+    /**
+     * Keep the idempotency key when the request fails.
+     */
     throw error;
   }
 }

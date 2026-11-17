@@ -4,8 +4,9 @@ import { paymentService } from "../services/payment.service";
 
 export const paymentQueryKeys = {
   all: ["payments"] as const,
-  detail: (paymentId: string) =>
-    [...paymentQueryKeys.all, "detail", paymentId] as const,
+
+  detail: (paymentId: string) => ["payments", "detail", paymentId] as const,
+
   status: (paymentId: string) => ["payments", "status", paymentId] as const,
 };
 
@@ -14,9 +15,13 @@ export const useGetPayment = (paymentId?: string) => {
 
   const query = useQuery({
     queryKey: paymentQueryKeys.detail(normalizedPaymentId),
+
     queryFn: () => paymentService.getPayment(normalizedPaymentId),
+
     enabled: normalizedPaymentId.length > 0,
+
     staleTime: 30_000,
+
     retry: 2,
   });
 
@@ -24,7 +29,9 @@ export const useGetPayment = (paymentId?: string) => {
     payment: query.data ?? null,
 
     isLoading: query.isLoading,
+
     isFetching: query.isFetching,
+
     isError: query.isError,
 
     error:

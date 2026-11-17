@@ -3,6 +3,7 @@ import { Link, useParams } from "react-router-dom";
 import { Button } from "@/ui/button";
 
 import PaymentStatus from "../components/PaymentStatus";
+
 import { useGetPayment } from "../hooks/useGetPayment";
 import { usePaymentStatus } from "../hooks/usePaymentStatus";
 
@@ -44,9 +45,6 @@ export default function PaymentResultPage() {
     );
   }
 
-  /**
-   * Initial payment details are loading.
-   */
   if (isPaymentLoading) {
     return (
       <main className="container mx-auto px-4 py-10">
@@ -57,9 +55,6 @@ export default function PaymentResultPage() {
     );
   }
 
-  /**
-   * Payment could not be loaded.
-   */
   if (paymentError || !payment) {
     return (
       <main className="container mx-auto px-4 py-10">
@@ -90,12 +85,6 @@ export default function PaymentResultPage() {
     );
   }
 
-  /**
-   * Safety fallback.
-   *
-   * This should normally never happen because Payment.status is required,
-   * but it prevents rendering an invalid payment state.
-   */
   if (!currentStatus) {
     return (
       <main className="container mx-auto px-4 py-10">
@@ -123,7 +112,6 @@ export default function PaymentResultPage() {
   return (
     <main className="container mx-auto px-4 py-10">
       <div className="mx-auto max-w-2xl">
-        {/* Header */}
         <div className="mb-8">
           <h1 className="text-3xl font-bold">Payment Result</h1>
 
@@ -133,10 +121,8 @@ export default function PaymentResultPage() {
         </div>
 
         <div className="space-y-6">
-          {/* Current payment status */}
           <PaymentStatus status={currentStatus} />
 
-          {/* Polling indicator */}
           {currentStatus === "CREATED" && isStatusFetching && (
             <p
               className="text-center text-sm text-muted-foreground"
@@ -146,7 +132,6 @@ export default function PaymentResultPage() {
             </p>
           )}
 
-          {/* Payment details */}
           <div className="rounded-xl border p-6">
             <h2 className="text-lg font-semibold">Payment Details</h2>
 
@@ -177,10 +162,14 @@ export default function PaymentResultPage() {
 
               <div className="flex justify-between gap-4">
                 <span className="text-muted-foreground">Amount</span>
+
                 <span className="font-semibold">
-                  ₹{payment.amount.toLocaleString("en-IN")}
+                  ₹
+                  {payment.amount.toLocaleString("en-IN", {
+                    minimumFractionDigits: 2,
+                    maximumFractionDigits: 2,
+                  })}
                 </span>
-                paymentStatus
               </div>
 
               <div className="flex justify-between gap-4">
@@ -191,14 +180,12 @@ export default function PaymentResultPage() {
             </div>
           </div>
 
-          {/* SUCCESS */}
           {currentStatus === "SUCCESS" && (
             <Button className="w-full">
               <Link to={`/orders/${payment.orderId}`}>View Order</Link>
             </Button>
           )}
 
-          {/* FAILED */}
           {currentStatus === "FAILED" && (
             <Button className="w-full">
               <Link to={`/payments/${payment.paymentId}/retry`}>
@@ -207,7 +194,6 @@ export default function PaymentResultPage() {
             </Button>
           )}
 
-          {/* STILL PROCESSING */}
           {currentStatus === "CREATED" && (
             <div className="rounded-lg border border-dashed p-4 text-center">
               <p className="text-sm text-muted-foreground">
@@ -221,7 +207,6 @@ export default function PaymentResultPage() {
             </div>
           )}
 
-          {/* Back to orders */}
           <Button variant="outline" className="w-full">
             <Link to="/orders">Back to Orders</Link>
           </Button>

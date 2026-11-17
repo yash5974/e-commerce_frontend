@@ -6,6 +6,7 @@ export const API_ENDPOINTS = {
     LOGIN: "/auth/login",
     REFRESH: "/auth/refresh",
     ME: "/auth/me",
+    UPDATE_PROFILE: "/auth/update/profile",
     LOGOUT: "/auth/logout",
     FORGOT: "/auth/forgot-password",
     RESET: "/auth/reset-password",
@@ -46,6 +47,10 @@ export const API_ENDPOINTS = {
   },
 
   ADMIN: {
+    CATEGORIES: {
+      LIST: "/admin/categories",
+    },
+
     PRODUCTS: {
       CREATE: "/admin/products",
       UPDATE: (id: string) => `/admin/products/${id}`,

@@ -3,6 +3,7 @@ import {
   useElements,
   useStripe,
 } from "@stripe/react-stripe-js";
+
 import { useState, type FormEvent } from "react";
 
 import { Button } from "@/ui/button";
@@ -35,6 +36,7 @@ export default function StripePaymentForm({
 
     const { error } = await stripe.confirmPayment({
       elements,
+
       confirmParams: {
         return_url: `${window.location.origin}/payments/${paymentId}`,
       },
@@ -58,7 +60,10 @@ export default function StripePaymentForm({
       >
         {isProcessing
           ? "Processing payment..."
-          : `Pay ₹${amount.toLocaleString("en-IN")}`}
+          : `Pay ₹${amount.toLocaleString("en-IN", {
+              minimumFractionDigits: 2,
+              maximumFractionDigits: 2,
+            })}`}
       </Button>
     </form>
   );

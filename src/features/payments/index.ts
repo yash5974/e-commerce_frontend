@@ -31,7 +31,6 @@ export * from "./api/payment.api";
 
 /* Services */
 export * from "./services/payment.service";
-export * from "./services/payment.gateway.service";
 
 /* Schemas */
 export * from "./schemas/payment.schema";

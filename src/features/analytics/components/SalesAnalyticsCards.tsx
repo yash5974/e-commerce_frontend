@@ -18,7 +18,7 @@ const formatCurrency = (amountInMinorUnits: number) => {
     style: "currency",
     currency: "INR",
     maximumFractionDigits: 2,
-  }).format(amountInMinorUnits / 100);
+  }).format(amountInMinorUnits);
 };
 
 const cards = [

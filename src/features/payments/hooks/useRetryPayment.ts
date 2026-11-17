@@ -1,11 +1,14 @@
 import { useCallback, useState } from "react";
 
 import { retryPaymentService } from "../services/payment.service";
+
 import type { Payment, PaymentProvider } from "../types/payment.type";
 
 export function useRetryPayment() {
   const [payment, setPayment] = useState<Payment | null>(null);
+
   const [isRetrying, setIsRetrying] = useState(false);
+
   const [error, setError] = useState<string | null>(null);
 
   const retryPayment = useCallback(
@@ -27,7 +30,7 @@ export function useRetryPayment() {
         return retryPayment;
       } catch (error: unknown) {
         const message =
-          error instanceof Error ? error.message : "Unable to retry payment";
+          error instanceof Error ? error.message : "Unable to retry payment.";
 
         setError(message);
 
@@ -43,11 +46,26 @@ export function useRetryPayment() {
     setError(null);
   }, []);
 
+  const setPaymentError = useCallback((message: string) => {
+    setError(message || null);
+  }, []);
+
+  const reset = useCallback(() => {
+    setPayment(null);
+    setError(null);
+    setIsRetrying(false);
+  }, []);
+
   return {
     payment,
     isRetrying,
     error,
+
     retryPayment,
+
     dismissError,
+    setPaymentError,
+
+    reset,
   };
 }

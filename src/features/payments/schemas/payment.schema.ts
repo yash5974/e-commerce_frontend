@@ -17,16 +17,52 @@ export const paymentProviderSchema = z.enum(["stripe", "razorpay"]);
 export const paymentStatusSchema = z.enum(["CREATED", "SUCCESS", "FAILED"]);
 
 export const paymentSchema = z.object({
-  id: z.string(),
+  paymentId: z.string(),
   orderId: z.string(),
+
   provider: paymentProviderSchema,
-  providerPaymentId: z.string(),
+
+  providerPaymentId: z.string().optional(),
+  providerOrderId: z.string().optional(),
   providerClientSecret: z.string().optional(),
+
   status: paymentStatusSchema,
-  amount: z.number(),
-  refundedAmount: z.number().nonnegative(),
+
+  /**
+   * INR major units.
+   */
+  amount: z.number().finite().nonnegative(),
+
+  /**
+   * INR major units.
+   */
+  refundedAmount: z.number().finite().nonnegative(),
+
   createdAt: z.string(),
   updatedAt: z.string(),
+});
+
+export const paymentIntentSchema = z.object({
+  paymentId: z.string(),
+  orderId: z.string(),
+
+  provider: paymentProviderSchema,
+
+  providerPaymentId: z.string().optional(),
+  providerOrderId: z.string().optional(),
+  providerClientSecret: z.string().optional(),
+
+  status: paymentStatusSchema,
+
+  amount: z.number().finite().nonnegative(),
+
+  createdAt: z.string(),
+});
+
+export const createPaymentIntentResponseSchema = z.object({
+  success: z.boolean(),
+  message: z.string(),
+  data: paymentIntentSchema,
 });
 
 export const getPaymentResponseSchema = z.object({
@@ -60,11 +96,17 @@ export const refundSchema = z.object({
   id: z.string(),
   paymentId: z.string(),
   orderId: z.string(),
+
   provider: paymentProviderSchema,
+
   providerRefundId: z.string().optional(),
-  amount: z.number(),
+
+  amount: z.number().finite().nonnegative(),
+
   reason: z.string(),
+
   status: refundStatusSchema,
+
   createdAt: z.string(),
   updatedAt: z.string(),
 });
@@ -76,6 +118,7 @@ export const refundPaymentResponseSchema = z.object({
 });
 
 export type RefundPaymentFormValues = z.infer<typeof refundPaymentSchema>;
+
 export type RefundSchema = z.infer<typeof refundSchema>;
 
 export type PaymentSchema = z.infer<typeof paymentSchema>;

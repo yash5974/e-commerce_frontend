@@ -11,7 +11,7 @@ const formatCurrency = (amountInMinorUnits: number) => {
     style: "currency",
     currency: "INR",
     maximumFractionDigits: 0,
-  }).format(amountInMinorUnits / 100);
+  }).format(amountInMinorUnits);
 };
 
 export const RevenueAnalyticsChart = ({
@@ -19,7 +19,7 @@ export const RevenueAnalyticsChart = ({
 }: RevenueAnalyticsChartProps) => {
   const dates = analytics.dailyRevenue.map((item) => item.date);
 
-  const revenue = analytics.dailyRevenue.map((item) => item.revenue / 100);
+  const revenue = analytics.dailyRevenue.map((item) => item.revenue);
 
   const orders = analytics.dailyRevenue.map((item) => item.orders);
 

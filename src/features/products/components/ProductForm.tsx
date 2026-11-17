@@ -1,31 +1,95 @@
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useEffect } from "react";
-import { useForm, type DefaultValues } from "react-hook-form";
+import { Controller, useForm, type DefaultValues } from "react-hook-form";
+import { z } from "zod";
 
 import { Button } from "@/ui/button";
 import { Input } from "@/ui/input";
 import { Textarea } from "@/ui/textarea";
 
-import {
-  createProductSchema,
-  type CreateProductFormValues,
-} from "../schemas/product.schema";
-
 import type { Product } from "../types/product.type";
+
+const productFormSchema = z
+  .object({
+    name: z
+      .string()
+      .trim()
+      .min(1, "Product name is required")
+      .max(150, "Product name must be at most 150 characters"),
+
+    description: z
+      .string()
+      .trim()
+      .min(1, "Description is required")
+      .max(5000, "Description must be at most 5000 characters"),
+
+    categoryId: z.string().trim().min(1, "Category is required"),
+
+    brand: z
+      .string()
+      .trim()
+      .min(1, "Brand is required")
+      .max(100, "Brand must be at most 100 characters"),
+
+    price: z
+      .number({ error: "Price is required" })
+      .finite("Price must be a valid number")
+      .nonnegative("Price cannot be negative"),
+
+    discountPrice: z
+      .number({ error: "Discount price is required" })
+      .finite("Discount price must be a valid number")
+      .nonnegative("Discount price cannot be negative"),
+
+    stock: z
+      .number({ error: "Stock is required" })
+      .int("Stock must be a whole number")
+      .nonnegative("Stock cannot be negative"),
+
+    mainImage: z.instanceof(File).optional(),
+
+    galleryImages: z
+      .array(z.instanceof(File))
+      .max(10, "Maximum 10 gallery images are allowed"),
+
+    tags: z
+      .array(
+        z
+          .string()
+          .trim()
+          .min(1, "Tag cannot be empty")
+          .max(50, "Tag cannot exceed 50 characters"),
+      )
+      .max(20, "Maximum 20 tags are allowed"),
+  })
+  .superRefine((data, ctx) => {
+    if (data.discountPrice > data.price) {
+      ctx.addIssue({
+        code: "custom",
+        path: ["discountPrice"],
+        message: "Discount price cannot be greater than price",
+      });
+    }
+  });
+
+export type ProductFormValues = z.infer<typeof productFormSchema>;
 
 interface ProductFormProps {
   product?: Product | null;
+
   categories: Array<{
     _id: string;
     name: string;
   }>;
+
   isSubmitting: boolean;
   serverError?: string | null;
-  onSubmit: (values: CreateProductFormValues) => Promise<void>;
+
+  onSubmit: (values: ProductFormValues) => Promise<void>;
   onCancel?: () => void;
 }
 
-const defaultValues: DefaultValues<CreateProductFormValues> = {
+const defaultValues: DefaultValues<ProductFormValues> = {
   name: "",
   description: "",
   categoryId: "",
@@ -33,7 +97,7 @@ const defaultValues: DefaultValues<CreateProductFormValues> = {
   price: 0,
   discountPrice: 0,
   stock: 0,
-  mainImage: "",
+  mainImage: undefined,
   galleryImages: [],
   tags: [],
 };
@@ -48,13 +112,15 @@ export const ProductForm = ({
 }: ProductFormProps) => {
   const {
     register,
+    control,
     handleSubmit,
     reset,
     setValue,
+    setError,
     watch,
     formState: { errors, isDirty },
-  } = useForm<CreateProductFormValues>({
-    resolver: zodResolver(createProductSchema),
+  } = useForm<ProductFormValues>({
+    resolver: zodResolver(productFormSchema),
     defaultValues,
     mode: "onBlur",
   });
@@ -73,35 +139,31 @@ export const ProductForm = ({
       price: product.price,
       discountPrice: product.discountPrice,
       stock: product.stock,
-      mainImage: product.mainImage,
-      galleryImages: product.galleryImages,
-      tags: product.tags,
+      mainImage: undefined,
+      galleryImages: [],
+      tags: product.tags ?? [],
     });
   }, [product, reset]);
 
-  const galleryImages = watch("galleryImages");
+  const galleryImages = watch("galleryImages") ?? [];
+  const tags = watch("tags") ?? [];
 
-  const tags = watch("tags");
+  const removeGalleryImage = (index: number) => {
+    const updatedFiles = galleryImages.filter(
+      (_, currentIndex) => currentIndex !== index,
+    );
 
-  const addGalleryImage = () => {
-    setValue("galleryImages", [...galleryImages, ""], {
+    setValue("galleryImages", updatedFiles, {
       shouldDirty: true,
       shouldValidate: true,
     });
   };
 
-  const removeGalleryImage = (index: number) => {
-    setValue(
-      "galleryImages",
-      galleryImages.filter((_, currentIndex) => currentIndex !== index),
-      {
-        shouldDirty: true,
-        shouldValidate: true,
-      },
-    );
-  };
-
   const addTag = () => {
+    if (tags.length >= 20) {
+      return;
+    }
+
     setValue("tags", [...tags, ""], {
       shouldDirty: true,
       shouldValidate: true,
@@ -119,14 +181,18 @@ export const ProductForm = ({
     );
   };
 
-  const submit = async (values: CreateProductFormValues) => {
+  const submit = async (values: ProductFormValues) => {
+    if (!product && !values.mainImage) {
+      setError("mainImage", {
+        type: "required",
+        message: "Main image is required",
+      });
+
+      return;
+    }
+
     await onSubmit({
       ...values,
-
-      galleryImages: values.galleryImages
-        .map((image) => image.trim())
-        .filter(Boolean),
-
       tags: values.tags.map((tag) => tag.trim()).filter(Boolean),
     });
   };
@@ -319,56 +385,154 @@ export const ProductForm = ({
       <section className="space-y-4">
         <div>
           <h2 className="text-lg font-semibold">Media</h2>
+
+          <p className="text-sm text-muted-foreground">
+            Upload product images.
+          </p>
         </div>
+
+        {/* MAIN IMAGE */}
 
         <div className="space-y-2">
           <label htmlFor="mainImage" className="text-sm font-medium">
-            Main image URL
+            Main image
           </label>
 
-          <Input
-            id="mainImage"
-            {...register("mainImage")}
-            placeholder="https://..."
+          <Controller
+            name="mainImage"
+            control={control}
+            render={({ field }) => (
+              <input
+                id="mainImage"
+                name={field.name}
+                ref={field.ref}
+                type="file"
+                accept="image/*"
+                onBlur={field.onBlur}
+                onChange={(event) => {
+                  const file = event.currentTarget.files?.item(0) ?? undefined;
+                  field.onChange(file);
+                }}
+                className="block w-full cursor-pointer rounded-md border border-input bg-background px-3 py-2 text-sm file:mr-4 file:rounded-md file:border-0 file:bg-primary file:px-3 file:py-1 file:text-primary-foreground"
+              />
+            )}
           />
+
+          {/* <Input
+            id="mainImage"
+            type="file"
+            accept="image/*"
+            {...register("mainImage", {
+              onChange: (event) => {
+                const file = event.target.files?.[0];
+
+                setValue("mainImage", file, {
+                  shouldDirty: true,
+                  shouldValidate: true,
+                });
+              },
+            })}
+          /> */}
+
+          <p className="text-xs text-muted-foreground">
+            Select the primary product image.
+          </p>
 
           {errors.mainImage && (
             <p className="text-sm text-destructive">
               {errors.mainImage.message}
             </p>
           )}
+
+          {product?.mainImage && (
+            <p className="text-xs text-muted-foreground">
+              Existing main image will remain unchanged unless you select a new
+              image.
+            </p>
+          )}
         </div>
+
+        {/* GALLERY IMAGES */}
 
         <div className="space-y-3">
           <div className="flex items-center justify-between">
-            <label className="text-sm font-medium">Gallery images</label>
-
-            <Button
-              type="button"
-              variant="outline"
-              onClick={addGalleryImage}
-              disabled={galleryImages.length >= 10}
-            >
-              Add image
-            </Button>
+            <label htmlFor="galleryImages" className="text-sm font-medium">
+              Gallery images
+            </label>
           </div>
 
-          {galleryImages.map((_, index) => (
-            <div key={index} className="flex gap-2">
-              <Input
-                {...register(`galleryImages.${index}`)}
-                placeholder="https://..."
-              />
+          <Controller
+            name="galleryImages"
+            control={control}
+            render={({ field }) => (
+              <input
+                id="galleryImages"
+                name={field.name}
+                ref={field.ref}
+                type="file"
+                accept="image/*"
+                multiple
+                onBlur={field.onBlur}
+                onChange={(event) => {
+                  const files = Array.from(
+                    event.currentTarget.files ?? [],
+                  ).slice(0, 10);
 
-              <Button
-                type="button"
-                variant="outline"
-                onClick={() => removeGalleryImage(index)}
-              >
-                Remove
-              </Button>
+                  field.onChange(files);
+                }}
+                className="block w-full cursor-pointer rounded-md border border-input bg-background px-3 py-2 text-sm file:mr-4 file:rounded-md file:border-0 file:bg-primary file:px-3 file:py-1 file:text-primary-foreground"
+              />
+            )}
+          />
+
+          {/* <Input
+            id="galleryImages"
+            type="file"
+            accept="image/*"
+            multiple
+            {...register("galleryImages", {
+              onChange: (event) => {
+                const fileList = event.target.files;
+                const files: File[] = fileList ? Array.from(fileList) : [];
+
+                setValue("galleryImages", files.slice(0, 10), {
+                  shouldDirty: true,
+                  shouldValidate: true,
+                });
+              },
+            })}
+          /> */}
+
+          <p className="text-xs text-muted-foreground">
+            Select up to 10 gallery images.
+          </p>
+
+          {errors.galleryImages && (
+            <p className="text-sm text-destructive">
+              {errors.galleryImages.message}
+            </p>
+          )}
+
+          {galleryImages.length > 0 && (
+            <div className="space-y-2">
+              {galleryImages.map((file, index) => (
+                <div
+                  key={`${file.name}-${index}`}
+                  className="flex items-center justify-between gap-2 rounded-md border p-3"
+                >
+                  <span className="min-w-0 truncate text-sm">{file.name}</span>
+
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={() => removeGalleryImage(index)}
+                  >
+                    Remove
+                  </Button>
+                </div>
+              ))}
             </div>
-          ))}
+          )}
         </div>
       </section>
 

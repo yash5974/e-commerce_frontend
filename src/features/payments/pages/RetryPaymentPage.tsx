@@ -7,8 +7,10 @@ import PaymentError from "../components/PaymentError";
 import PaymentGateway from "../components/PaymentGateway";
 import PaymentMethodSelector from "../components/PaymentMethodSelector";
 import PaymentSummary from "../components/PaymentSummary";
+
 import { useGetPayment } from "../hooks/useGetPayment";
 import { useRetryPayment } from "../hooks/useRetryPayment";
+
 import { PaymentProvider, PaymentStatus } from "../types/payment.type";
 
 export default function RetryPaymentPage() {
@@ -30,6 +32,7 @@ export default function RetryPaymentPage() {
     error: retryError,
     retryPayment: executeRetry,
     dismissError,
+    setPaymentError,
   } = useRetryPayment();
 
   if (!paymentId) {
@@ -102,15 +105,6 @@ export default function RetryPaymentPage() {
     void executeRetry(paymentId, provider);
   };
 
-  /*
-   * IMPORTANT:
-   *
-   * retryPayment represents the NEW payment attempt returned
-   * by POST /payments/:paymentId/retry.
-   *
-   * It must be sent to the gateway instead of navigating directly
-   * to the payment-result page.
-   */
   if (retryPayment) {
     return (
       <main className="container mx-auto px-4 py-10">
@@ -135,8 +129,27 @@ export default function RetryPaymentPage() {
               </p>
 
               <PaymentGateway
-                intent={retryPayment}
-                onPaymentError={dismissError}
+                intent={
+                  retryPayment.provider === "stripe"
+                    ? {
+                        paymentId: retryPayment.paymentId,
+                        orderId: retryPayment.orderId,
+                        provider: "stripe",
+                        amount: retryPayment.amount,
+                        currency: "INR",
+                        providerClientSecret:
+                          retryPayment.providerClientSecret ?? "",
+                      }
+                    : {
+                        paymentId: retryPayment.paymentId,
+                        orderId: retryPayment.orderId,
+                        provider: "razorpay",
+                        amount: retryPayment.amount,
+                        currency: "INR",
+                        providerOrderId: retryPayment.providerOrderId ?? "",
+                      }
+                }
+                onPaymentError={setPaymentError}
               />
             </div>
           </div>

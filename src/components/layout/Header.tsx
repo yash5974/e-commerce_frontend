@@ -27,7 +27,6 @@ interface HeaderProps {
 export default function Header({ variant = "PUBLIC" }: HeaderProps) {
   const navigate = useNavigate();
 
-  const { isLoading } = useAppSelector((state) => state.auth);
   const cartItemCount = useAppSelector(selectCartItemCount);
 
   const { isAuthenticated, role } = getUserRole();
@@ -50,7 +49,9 @@ export default function Header({ variant = "PUBLIC" }: HeaderProps) {
     }
 
     return publicNavigation;
-  }, [isAuthHeader, isAdmin, isUser, isLoading]);
+  }, [isAuthHeader, isAdmin, isUser]);
+
+  const mobileNavigation = isAuthHeader ? publicNavigation : navigation;
 
   return (
     <header className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur-xl">
@@ -70,10 +71,10 @@ export default function Header({ variant = "PUBLIC" }: HeaderProps) {
       >
         {/* LEFT */}
         <div className="flex min-w-0 items-center gap-2">
-          {!isAuthHeader && (
-            <MobileNav items={navigation} isAuthenticated={isAuthenticated} />
-          )}
-
+          <MobileNav
+            items={mobileNavigation}
+            isAuthenticated={isAuthHeader ? false : isAuthenticated}
+          />
           <Logo />
         </div>
 

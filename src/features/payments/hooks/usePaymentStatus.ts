@@ -1,6 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
 import { useEffect, useRef } from "react";
-
 import { getPaymentStatusApi } from "../api/payment.api";
 import { PaymentStatus } from "../types/payment.type";
 import { paymentQueryKeys } from "./useGetPayment";
@@ -11,7 +10,6 @@ const PAYMENT_STATUS_MAX_DURATION = 60_000;
 export function usePaymentStatus(paymentId?: string, enabled = true) {
   const normalizedPaymentId = paymentId?.trim() ?? "";
   const pollingStartedAtRef = useRef<number | null>(null);
-
   useEffect(() => {
     pollingStartedAtRef.current = normalizedPaymentId ? Date.now() : null;
   }, [normalizedPaymentId]);
@@ -23,11 +21,15 @@ export function usePaymentStatus(paymentId?: string, enabled = true) {
     staleTime: 0,
     retry: 2,
     refetchInterval: (query) => {
+      console.log("query: ", query);
       const status = query.state.data?.data?.status;
       if (status === PaymentStatus.SUCCESS) {
         return false;
       }
       if (status === PaymentStatus.FAILED) {
+        return false;
+      }
+      if (status !== PaymentStatus.CREATED) {
         return false;
       }
       const startedAt = pollingStartedAtRef.current;

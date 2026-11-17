@@ -9,7 +9,10 @@ import { UpdateInventoryDialog } from "@/features/inventory";
 import { Button } from "@/ui/button";
 import { useState } from "react";
 import ProductDeleteDialog from "../components/ProductDeleteDialog";
-import type { CreateProductFormValues } from "../schemas/product.schema";
+import type {
+  ProductFormValues,
+  UpdateProductFormValues,
+} from "../schemas/product.schema";
 
 export const AdminProductEditPage = () => {
   const navigate = useNavigate();
@@ -26,19 +29,33 @@ export const AdminProductEditPage = () => {
 
   const { submit, isUpdating, error: updateError } = useUpdateProduct();
 
-  const handleSubmit = async (values: CreateProductFormValues) => {
+  const handleSubmit = async (values: ProductFormValues): Promise<void> => {
     if (!id) {
+      toast.error("Product ID is missing.");
       return;
     }
 
+    const payload: UpdateProductFormValues = {
+      name: values.name,
+      description: values.description,
+      categoryId: values.categoryId,
+      brand: values.brand,
+      price: values.price,
+      discountPrice: values.discountPrice,
+      stock: values.stock,
+      tags: values.tags.map((tag) => tag.trim()).filter(Boolean),
+      ...(values.mainImage ? { mainImage: values.mainImage } : {}),
+      ...(values.galleryImages.length > 0
+        ? { galleryImages: values.galleryImages }
+        : {}),
+    };
+
     try {
-      await submit(id, values);
-
+      await submit(id, payload);
       toast.success("Product updated successfully.");
-
       navigate("/admin/products");
     } catch {
-      // Form renders updateError.
+      // Keep the update error visible in the form.
     }
   };
 

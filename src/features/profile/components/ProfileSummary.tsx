@@ -1,10 +1,27 @@
-import { Badge } from "@/ui/badge";
-import { useAppSelector } from "@/store/hooks";
+import { useEffect } from "react";
+import { Pencil } from "lucide-react";
 
-const ProfileSummary = () => {
-  const { user, isLoading, isAuthenticated } = useAppSelector(
-    (state) => state.auth,
-  );
+import { Badge } from "@/ui/badge";
+import { Button } from "@/ui/button";
+
+import type { CurrentUser } from "../types/profile.type";
+
+interface ProfileSummaryProps {
+  user: CurrentUser | null;
+  isLoading: boolean;
+  fetchCurrentUser: () => Promise<CurrentUser | null>;
+  onEditProfile: () => void;
+}
+
+const ProfileSummary = ({
+  user,
+  isLoading,
+  fetchCurrentUser,
+  onEditProfile,
+}: ProfileSummaryProps) => {
+  useEffect(() => {
+    void fetchCurrentUser();
+  }, [fetchCurrentUser]);
 
   if (isLoading) {
     return (
@@ -19,7 +36,7 @@ const ProfileSummary = () => {
     );
   }
 
-  if (!isAuthenticated || !user) {
+  if (!user) {
     return (
       <section className="rounded-lg border p-6">
         <p className="text-sm text-muted-foreground">
@@ -31,11 +48,24 @@ const ProfileSummary = () => {
 
   return (
     <section className="rounded-lg border p-6">
-      <div className="mb-6">
-        <h2 className="text-lg font-semibold">Profile Summary</h2>
-        <p className="text-sm text-muted-foreground">
-          View your account information.
-        </p>
+      <div className="mb-6 flex items-start justify-between gap-4">
+        <div>
+          <h2 className="text-lg font-semibold">Profile Summary</h2>
+
+          <p className="text-sm text-muted-foreground">
+            View your account information.
+          </p>
+        </div>
+
+        <Button
+          type="button"
+          variant="outline"
+          size="sm"
+          onClick={onEditProfile}
+        >
+          <Pencil className="mr-2 size-4" />
+          Edit Profile
+        </Button>
       </div>
 
       <div className="space-y-4">
@@ -57,20 +87,8 @@ const ProfileSummary = () => {
         <div>
           <p className="mb-1 text-sm text-muted-foreground">Account Status</p>
 
-          <Badge
-            variant={
-              user.role
-                ? "default"
-                : user.role === undefined
-                  ? "secondary"
-                  : "outline"
-            }
-          >
-            {user.role
-              ? "Active"
-              : user.role === undefined
-                ? "Inactive"
-                : "Unknown"}
+          <Badge variant={user.isActive ? "default" : "secondary"}>
+            {user.isActive ? "Active" : "Inactive"}
           </Badge>
         </div>
       </div>

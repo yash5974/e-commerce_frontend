@@ -1,11 +1,12 @@
 import { useCallback, useState } from "react";
-
 import { createPaymentIntentService } from "../services/payment.service";
 import type { PaymentIntent, PaymentProvider } from "../types/payment.type";
 
 interface UseCreatePaymentIntentReturn {
   intent: PaymentIntent | null;
+
   isCreatingIntent: boolean;
+
   error: string | null;
 
   createIntent: (
@@ -14,6 +15,7 @@ interface UseCreatePaymentIntentReturn {
   ) => Promise<PaymentIntent | null>;
 
   dismissError: () => void;
+
   reset: () => void;
 }
 
@@ -27,7 +29,9 @@ function getErrorMessage(error: unknown): string {
 
 export function useCreatePaymentIntent(): UseCreatePaymentIntentReturn {
   const [intent, setIntent] = useState<PaymentIntent | null>(null);
+
   const [isCreatingIntent, setIsCreatingIntent] = useState(false);
+
   const [error, setError] = useState<string | null>(null);
 
   const createIntent = useCallback(

@@ -11,7 +11,7 @@ const formatCurrency = (amountInMinorUnits: number): string => {
     style: "currency",
     currency: "INR",
     maximumFractionDigits: 2,
-  }).format(amountInMinorUnits / 100);
+  }).format(amountInMinorUnits);
 };
 
 const formatNumber = (value: number): string => {

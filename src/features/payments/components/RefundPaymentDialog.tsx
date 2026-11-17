@@ -1,5 +1,6 @@
 import { zodResolver } from "@hookform/resolvers/zod";
 import { AlertCircle, Loader2, RotateCcw } from "lucide-react";
+
 import { useForm } from "react-hook-form";
 
 import { Button } from "@/ui/button";
@@ -16,10 +17,12 @@ import { Label } from "@/ui/label";
 import { Textarea } from "@/ui/textarea";
 
 import { useRefundPayment } from "../hooks/useRefundPayment";
+
 import {
   refundPaymentSchema,
   type RefundPaymentFormValues,
 } from "../schemas/payment.schema";
+
 import type { Payment } from "../types/payment.type";
 
 interface RefundPaymentDialogProps {
@@ -29,11 +32,11 @@ interface RefundPaymentDialogProps {
   onSuccess?: () => void;
 }
 
-const formatAmount = (amountMinor: number): string => {
+const formatAmount = (amount: number): string => {
   return new Intl.NumberFormat("en-IN", {
     style: "currency",
     currency: "INR",
-  }).format(amountMinor / 100);
+  }).format(amount);
 };
 
 export default function RefundPaymentDialog({
@@ -44,6 +47,7 @@ export default function RefundPaymentDialog({
 }: RefundPaymentDialogProps) {
   const form = useForm<RefundPaymentFormValues>({
     resolver: zodResolver(refundPaymentSchema),
+
     defaultValues: {
       amount: undefined,
       reason: "",
@@ -53,7 +57,7 @@ export default function RefundPaymentDialog({
   const { refund, isRefunding, error, refundPayment, reset } =
     useRefundPayment();
 
-  const refundableAmount = payment.amount - payment.refundedAmount;
+  const refundableAmount = Math.max(payment.amount - payment.refundedAmount, 0);
 
   const handleOpenChange = (nextOpen: boolean) => {
     if (isRefunding) {
@@ -72,12 +76,14 @@ export default function RefundPaymentDialog({
     try {
       await refundPayment({
         paymentId: payment.paymentId,
+
         payload: {
           ...(values.amount !== undefined
             ? {
-                amount: values.amount,
+                amount: Number(values.amount.toFixed(2)),
               }
             : {}),
+
           reason: values.reason.trim(),
         },
       });
@@ -158,6 +164,7 @@ export default function RefundPaymentDialog({
               type="number"
               inputMode="decimal"
               min="0.01"
+              max={refundableAmount}
               step="0.01"
               placeholder="Leave empty for full refund"
               disabled={isRefunding}

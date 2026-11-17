@@ -1,6 +1,6 @@
 import { LogOut } from "lucide-react";
 
-import { Avatar, AvatarFallback } from "@/ui/avatar";
+import { Avatar, AvatarFallback, AvatarImage } from "@/ui/avatar";
 
 import { useLogout } from "@/features/auth";
 import {
@@ -17,11 +17,23 @@ export default function UserMenu() {
     await logout();
   };
 
+  const profileImage = "Y";
+
   return (
     <DropdownMenu>
       <DropdownMenuTrigger>
         <Avatar className="cursor-pointer">
           <AvatarFallback>Y</AvatarFallback>
+        </Avatar>
+        <Avatar className="cursor-pointer">
+          <AvatarImage src={profileImage} alt="Profile" />
+          <AvatarFallback>
+            <img
+              src="/images/profile-placeholder.png"
+              alt="Profile placeholder"
+              className="size-full object-cover"
+            />
+          </AvatarFallback>
         </Avatar>
       </DropdownMenuTrigger>
 
