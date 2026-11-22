@@ -11,4 +11,7 @@ export const updateInventorySchema = z.object({
   type: inventoryLogTypeSchema,
 });
 
-export type UpdateInventoryFormValues = z.infer<typeof updateInventorySchema>;
+export type UpdateInventoryFormInput = z.input<typeof updateInventorySchema>;
+
+// Output type after Zod validation and coercion
+export type UpdateInventoryFormValues = z.output<typeof updateInventorySchema>;

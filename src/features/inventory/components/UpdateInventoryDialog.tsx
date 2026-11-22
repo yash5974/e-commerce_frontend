@@ -7,6 +7,7 @@ import { Button } from "@/ui/button";
 
 import {
   updateInventorySchema,
+  type UpdateInventoryFormInput,
   type UpdateInventoryFormValues,
 } from "../schemas/inventory.schema";
 
@@ -35,7 +36,7 @@ const UpdateInventoryDialog = ({
     watch,
     reset,
     formState: { errors },
-  } = useForm<UpdateInventoryFormValues>({
+  } = useForm<UpdateInventoryFormInput, undefined, UpdateInventoryFormValues>({
     resolver: zodResolver(updateInventorySchema),
     defaultValues: {
       quantity: 1,

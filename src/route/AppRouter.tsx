@@ -25,12 +25,7 @@ import {
   PaymentResultPage,
 } from "@/features/payments";
 import RetryPaymentPage from "@/features/payments/pages/RetryPaymentPage";
-import {
-  AdminProductCreatePage,
-  AdminProductEditPage,
-  ProductDetailsPage,
-  ProductsPage,
-} from "@/features/products";
+import { ProductDetailsPage, ProductsPage } from "@/features/products";
 import ProductPage from "@/features/products/pages/ProductPage";
 import ProfilePage from "@/features/profile/pages/ProfilePage";
 import AdminLayout from "@/layouts/AdminLayout";
@@ -43,7 +38,6 @@ import Unauthorized from "@/pages/Unauthorized";
 import AdminRoute from "./AdminRoute";
 import GuestRoute from "./GuestRoute";
 import ProtectedRoute from "./ProtectedRoute";
-import UnderDevelopmentPage from "@/pages/UnderDevelopmentPage";
 
 const AppRouter = createBrowserRouter([
   /**
@@ -160,23 +154,6 @@ const AppRouter = createBrowserRouter([
       {
         element: <AdminLayout />,
         children: [
-          {
-            path: "/admin/products",
-            element: <AdminProductCreatePage />,
-          },
-          // {
-          //   path: "/admin/products",
-          //   element: (
-          //     <UnderDevelopmentPage
-          //       title="Add Product"
-          //       description="Our adding product is currently under development. Stay tuned!"
-          //     />
-          //   ),
-          // },
-          {
-            path: "/admin/products/:id/edit",
-            element: <AdminProductEditPage />,
-          },
           {
             path: "/admin/orders",
             element: <AdminOrdersPage />,

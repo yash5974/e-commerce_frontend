@@ -54,8 +54,7 @@ export default function RefundPaymentDialog({
     },
   });
 
-  const { refund, isRefunding, error, refundPayment, reset } =
-    useRefundPayment();
+  const { isRefunding, error, refundPayment, reset } = useRefundPayment();
 
   const refundableAmount = Math.max(payment.amount - payment.refundedAmount, 0);
 

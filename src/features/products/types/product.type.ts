@@ -105,33 +105,6 @@ export interface ProductDetailsResponse {
   data: ProductDetails;
 }
 
-export interface CreateProductPayload {
-  name: string;
-  description: string;
-  categoryId: string;
-  brand: string;
-  price: number;
-  discountPrice: number;
-  stock: number;
-  mainImage: File;
-  galleryImages: File[];
-  tags: string[];
-}
-
-export interface UpdateProductPayload {
-  name?: string;
-  description?: string;
-  categoryId?: string;
-  brand?: string;
-  price?: number;
-  discountPrice?: number;
-  stock?: number;
-  mainImage?: File;
-  galleryImages?: File[];
-  tags?: string[];
-  isActive?: boolean;
-}
-
 export type DeleteProductResponse = ApiResponse<null>;
 export interface ApiResponse<T> {
   success: boolean;

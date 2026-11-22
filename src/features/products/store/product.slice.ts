@@ -6,17 +6,11 @@ import {
 
 import { productService } from "../services/product.service";
 
-import type {
-  CreateProductPayload,
-  Product,
-  UpdateProductPayload,
-} from "../types/product.type";
+import type { Product } from "../types/product.type";
 
 interface ProductState {
   currentProduct: Product | null;
 
-  isCreating: boolean;
-  isUpdating: boolean;
   isDeleting: boolean;
 
   createError: string | null;
@@ -27,41 +21,12 @@ interface ProductState {
 const initialState: ProductState = {
   currentProduct: null,
 
-  isCreating: false,
-  isUpdating: false,
   isDeleting: false,
 
   createError: null,
   updateError: null,
   deleteError: null,
 };
-
-export const createProduct = createAsyncThunk<
-  Product,
-  CreateProductPayload,
-  { rejectValue: string }
->("product/createProduct", async (payload, { rejectWithValue }) => {
-  try {
-    return await productService.create(payload);
-  } catch (error: unknown) {
-    return rejectWithValue(getApiErrorMessage(error));
-  }
-});
-
-export const updateProduct = createAsyncThunk<
-  Product,
-  {
-    id: string;
-    payload: UpdateProductPayload;
-  },
-  { rejectValue: string }
->("product/updateProduct", async ({ id, payload }, { rejectWithValue }) => {
-  try {
-    return await productService.update(id, payload);
-  } catch (error: unknown) {
-    return rejectWithValue(getApiErrorMessage(error));
-  }
-});
 
 export const deleteProduct = createAsyncThunk<
   string,
@@ -126,38 +91,6 @@ const productSlice = createSlice({
 
   extraReducers: (builder) => {
     builder
-
-      // CREATE
-      .addCase(createProduct.pending, (state) => {
-        state.isCreating = true;
-        state.createError = null;
-      })
-
-      .addCase(createProduct.fulfilled, (state, action) => {
-        state.isCreating = false;
-        state.currentProduct = action.payload;
-      })
-
-      .addCase(createProduct.rejected, (state, action) => {
-        state.isCreating = false;
-        state.createError = action.payload ?? "Failed to create product.";
-      })
-
-      // UPDATE
-      .addCase(updateProduct.pending, (state) => {
-        state.isUpdating = true;
-        state.updateError = null;
-      })
-
-      .addCase(updateProduct.fulfilled, (state, action) => {
-        state.isUpdating = false;
-        state.currentProduct = action.payload;
-      })
-
-      .addCase(updateProduct.rejected, (state, action) => {
-        state.isUpdating = false;
-        state.updateError = action.payload ?? "Failed to update product.";
-      })
 
       .addCase(deleteProduct.pending, (state) => {
         state.isDeleting = true;

@@ -3,13 +3,11 @@ import API_ENDPOINTS from "@/api/endpoints";
 
 import type {
   ApiResponse,
-  CreateProductPayload,
   DeleteProductResponse,
   Product,
   ProductDetailsResponse,
   ProductFilters,
   ProductListResponse,
-  UpdateProductPayload,
 } from "../types/product.type";
 
 export const getProductsApi = (
@@ -69,53 +67,10 @@ export const getProductDetailsApi = (
   );
 };
 
-function toCreateProductFormData(payload: CreateProductPayload): FormData {
-  const formData = new FormData();
-
-  formData.append("name", payload.name);
-  formData.append("description", payload.description);
-  formData.append("categoryId", payload.categoryId);
-  formData.append("brand", payload.brand);
-  formData.append("price", String(payload.price));
-  formData.append("discountPrice", String(payload.discountPrice));
-  formData.append("stock", String(payload.stock));
-
-  formData.append("mainImage", payload.mainImage);
-
-  for (const image of payload.galleryImages) {
-    formData.append("galleryImages", image);
-  }
-
-  for (const tag of payload.tags) {
-    formData.append("tags", tag);
-  }
-
-  return formData;
-}
-
 export const productApi = {
-  create(payload: CreateProductPayload): Promise<ApiResponse<Product>> {
-    const formData = toCreateProductFormData(payload);
-
-    return apiClient.post<ApiResponse<Product>, FormData>(
-      API_ENDPOINTS.ADMIN.PRODUCTS.CREATE,
-      formData,
-    );
-  },
-
   getById(id: string): Promise<ApiResponse<Product>> {
     return apiClient.get<ApiResponse<Product>>(
       API_ENDPOINTS.PRODUCTS.DETAILS(id),
-    );
-  },
-
-  update(
-    id: string,
-    payload: UpdateProductPayload,
-  ): Promise<ApiResponse<Product>> {
-    return apiClient.put<ApiResponse<Product>, UpdateProductPayload>(
-      API_ENDPOINTS.ADMIN.PRODUCTS.UPDATE(id),
-      payload,
     );
   },
 

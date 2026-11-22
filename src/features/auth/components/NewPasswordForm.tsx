@@ -20,11 +20,7 @@ export default function NewPasswordForm({ userId }: NewPasswordFormProps) {
 
   const { isUpdating, error, updatePassword, clearError } = useNewPassword();
 
-  const {
-    register,
-    handleSubmit,
-    formState: { errors },
-  } = useForm<NewPasswordFormValues>({
+  const { register, handleSubmit } = useForm<NewPasswordFormValues>({
     resolver: zodResolver(newPasswordSchema),
     mode: "onTouched",
     defaultValues: {

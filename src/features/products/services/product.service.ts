@@ -5,12 +5,10 @@ import {
 } from "../api/product.api";
 import { productFiltersSchema } from "../schemas/product.schema";
 import type {
-  CreateProductPayload,
   Product,
   ProductDetailsResponse,
   ProductFilters,
   ProductListResponse,
-  UpdateProductPayload,
 } from "../types/product.type";
 
 export const getProducts = async (
@@ -37,20 +35,8 @@ export const getProductDetails = async (
 };
 
 export const productService = {
-  async create(payload: CreateProductPayload): Promise<Product> {
-    const response = await productApi.create(payload);
-
-    return response.data;
-  },
-
   async getById(id: string): Promise<Product> {
     const response = await productApi.getById(id);
-    return response.data;
-  },
-
-  async update(id: string, payload: UpdateProductPayload): Promise<Product> {
-    const response = await productApi.update(id, payload);
-
     return response.data;
   },
 
