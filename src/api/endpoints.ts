@@ -52,8 +52,6 @@ export const API_ENDPOINTS = {
     },
 
     PRODUCTS: {
-      // CREATE: "/admin/products",
-      // UPDATE: (id: string) => `/admin/products/${id}`,
       DELETE: (id: string) => `/admin/products/${id}`,
     },
 
